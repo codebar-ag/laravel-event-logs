@@ -14,8 +14,7 @@ trait HasEventLogTrait
 {
     protected static function bootHasEventLogTrait(): void
     {
-        $enabled = (bool) config('laravel-event-logs.enabled', false);
-        if (! $enabled) {
+        if (! EventLog::isEnabled()) {
             return;
         }
 
@@ -30,6 +29,10 @@ trait HasEventLogTrait
 
     protected function logModelEvent(EventLogEventEnum $event): void
     {
+        if (! EventLog::isEnabled()) {
+            return;
+        }
+
         $user = Auth::user();
 
         $attributes = $event === EventLogEventEnum::CREATED

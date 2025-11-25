@@ -2,6 +2,8 @@
 
 namespace CodebarAg\LaravelEventLogs;
 
+use CodebarAg\LaravelEventLogs\Commands\CreateSchemaCommand;
+use CodebarAg\LaravelEventLogs\Commands\DropSchemaCommand;
 use CodebarAg\LaravelEventLogs\Models\EventLog;
 use CodebarAg\LaravelEventLogs\Observers\EventLogObserver;
 use Illuminate\Support\ServiceProvider;
@@ -21,6 +23,10 @@ class LaravelEventLogsServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+            $this->commands([
+                CreateSchemaCommand::class,
+                DropSchemaCommand::class,
+            ]);
         }
 
         EventLog::observe(EventLogObserver::class);

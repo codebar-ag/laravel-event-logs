@@ -9,6 +9,7 @@ use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
 
 /**
  * @property int $id
@@ -60,6 +61,24 @@ class EventLog extends Model
         'synced_at',
         'sync_failed_at',
     ];
+
+    /**
+     * Check if event logs are enabled and properly configured.
+     */
+    public static function isEnabled(): bool
+    {
+        $enabled = (bool) Config::get('laravel-event-logs.enabled', false);
+        if (! $enabled) {
+            return false;
+        }
+
+        $connection = Config::get('laravel-event-logs.connection');
+        if (empty($connection)) {
+            return false;
+        }
+
+        return true;
+    }
 
     /** @var array<string, string> */
     protected $casts = [
