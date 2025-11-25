@@ -105,7 +105,6 @@ test('AzureEventHubDTO handles null values correctly', function () {
 });
 
 test('AzureEventHubDTO handles event with null value', function () {
-    // Create event log with type but null event
     $eventLog = EventLog::create([
         'uuid' => 'test-uuid-non-enum',
         'type' => EventLogTypeEnum::HTTP,

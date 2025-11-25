@@ -55,7 +55,6 @@ test('middleware skips logging when disabled', function () {
 
     expect($result)->toBe($response);
 
-    // Check that no event log was created
     $eventLogCount = EventLog::count();
     expect($eventLogCount)->toBe(0);
 });

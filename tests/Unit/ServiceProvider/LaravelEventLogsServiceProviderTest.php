@@ -18,7 +18,6 @@ test('service provider publishes config file', function () {
     $provider = new LaravelEventLogsServiceProvider($this->app);
     $provider->boot();
 
-    // Verify that the config is published by checking if it's available
     expect(config('laravel-event-logs'))->toBeArray();
     expect(config('laravel-event-logs.enabled'))->not->toBeNull();
 });
@@ -37,11 +36,9 @@ test('service provider registers observer for EventLog model', function () {
     $provider = new LaravelEventLogsServiceProvider($this->app);
     $provider->boot();
 
-    // Create an event log and verify observer is working
     $eventLog = new EventLog;
     $eventLog->type = \CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum::HTTP;
 
-    // The observer should set uuid automatically
     $eventLog->save();
 
     expect($eventLog->uuid)->not->toBeNull();
@@ -51,6 +48,5 @@ test('service provider loads migrations when running in console', function () {
     $provider = new LaravelEventLogsServiceProvider($this->app);
     $provider->boot();
 
-    // Verify migrations are loaded by checking if table exists
     expect(Schema::hasTable('event_logs'))->toBeTrue();
 });

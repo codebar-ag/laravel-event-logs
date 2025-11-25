@@ -14,6 +14,9 @@ This package provides event logging for HTTP requests and model events. It is pr
 
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Configuration](#configuration)
+  - [Database Connection](#database-connection)
+  - [Schema Management](#schema-management)
 - [Usage](#usage)
   - [Middleware Request Logging](#middleware-request-logging)
   - [Model Event Logging](#model-event-logging)
@@ -42,6 +45,69 @@ php artisan vendor:publish --provider="CodebarAg\\LaravelEventLogs\\LaravelEvent
 
 This will publish the configuration file to `config/laravel-event-logs.php` where you can customize the package settings.
 
+## Configuration
+
+### Database Connection
+
+By default, the package uses your application's default database connection. You can specify a custom database connection for event logs by setting the `connection` option in your configuration file:
+
+```php
+// config/laravel-event-logs.php
+return [
+    'enabled' => env('EVENT_LOGS_ENABLED', false),
+    'connection' => env('EVENT_LOGS_CONNECTION', null), // Set to null to use default connection
+    // ... other configuration
+];
+```
+
+Or via environment variable:
+
+```bash
+EVENT_LOGS_CONNECTION=event_logs_db
+```
+
+This is useful when you want to store event logs in a separate database for better performance or isolation.
+
+### Schema Management
+
+The package provides Artisan commands to manage the event logs database schema:
+
+#### Create Schema
+
+Create the database schema for event logs:
+
+```bash
+php artisan event-logs:schema:create
+```
+
+This command will:
+- Check if the event logs connection is configured
+- Verify if the schema already exists
+- Run the migration to create the `event_logs` table if it doesn't exist
+
+**Note**: The command requires the `connection` configuration to be set. If not configured, the command will fail with an error message.
+
+#### Drop Schema
+
+Drop the database schema for event logs:
+
+```bash
+php artisan event-logs:schema:drop
+```
+
+Or with the force option (no confirmation):
+
+```bash
+php artisan event-logs:schema:drop --force
+```
+
+This command will:
+- Check if the event logs connection is configured
+- Verify if the schema exists
+- Drop the `event_logs` table if it exists
+
+**Warning**: This will permanently delete all event logs data. Use with caution.
+
 ## Usage
 
 ### Middleware Request Logging
@@ -54,6 +120,7 @@ The `EventLogMiddleware` automatically logs all HTTP requests. Add it to your La
 // config/laravel-event-logs.php
 return [
     'enabled' => env('EVENT_LOGS_ENABLED', false),
+    'connection' => env('EVENT_LOGS_CONNECTION', null),
     'exclude_routes' => [
         'livewire.update',
     ],

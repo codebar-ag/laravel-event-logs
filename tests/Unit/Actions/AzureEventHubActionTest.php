@@ -84,7 +84,7 @@ test('azure event hub action handles endpoint with trailing slash', function () 
     $resourceUrl = $action->resourceUrl();
 
     expect($resourceUrl)->toBeString();
-    expect($resourceUrl)->not->toContain('//');
+    expect($resourceUrl)->toBe('https://test-namespace.servicebus.windows.net/test-event-hub');
 });
 
 test('azure event hub action handles missing config values', function () {
