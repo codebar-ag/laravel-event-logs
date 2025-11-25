@@ -44,7 +44,6 @@ test('AzureEventHubDTO maps EventLog fields correctly', function () {
     expect($dto->context)->toBe(['tenant_id' => 1]);
     expect($dto->created_at)->not->toBeNull();
 
-    // Validate array representation uses scalar enum values
     expect($array['uuid'])->toBe('123e4567-e89b-12d3-a456-426614174000');
     expect($array['type'])->toBe(EventLogTypeEnum::HTTP->value);
     expect($array['event'])->toBe(EventLogEventEnum::CREATED->value);

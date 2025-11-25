@@ -69,7 +69,6 @@ test('event log casts enums correctly', function () {
 });
 
 test('scope unsynced returns only unsynced logs', function () {
-    // Create synced and unsynced logs
     EventLog::create([
         'uuid' => 'synced-1',
         'type' => EventLogTypeEnum::MODEL,

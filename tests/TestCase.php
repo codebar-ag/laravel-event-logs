@@ -21,7 +21,6 @@ abstract class TestCase extends Orchestra
 
     protected function getEnvironmentSetUp($app): void
     {
-        // Use SQLite for testing
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
             'driver' => 'sqlite',
@@ -29,9 +28,9 @@ abstract class TestCase extends Orchestra
             'prefix' => '',
         ]);
 
-        // Set up Event Logs config for testing
         $app['config']->set('laravel-event-logs', [
             'enabled' => true,
+            'connection' => 'testing',
             'providers' => [
                 'azure_event_hub' => [
                     'endpoint' => env('AZURE_EVENT_HUB_ENDPOINT', 'https://test-namespace.servicebus.windows.net'),
@@ -55,13 +54,11 @@ abstract class TestCase extends Orchestra
             ],
         ]);
 
-        // Ensure testing environment
         $app['config']->set('app.env', 'testing');
         $app['config']->set('cache.default', 'array');
         $app['config']->set('session.driver', 'array');
         $app['config']->set('queue.default', 'sync');
 
-        // Create auxiliary test tables needed by tests
         Schema::create('test_models', function (Blueprint $table) {
             $table->increments('id');
             $table->string('name');
@@ -69,5 +66,8 @@ abstract class TestCase extends Orchestra
             $table->softDeletes();
             $table->timestamps();
         });
+
+        $migration = include __DIR__.'/../database/migrations/2025_08_09_115521_create_event_logs_table.php';
+        $migration->up();
     }
 }

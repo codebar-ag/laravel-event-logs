@@ -65,7 +65,6 @@ test('removeKeys handles nested arrays', function () {
 
     $result = SanitizeHelper::removeKeys($data, $keysToRemove);
 
-    // The current implementation only removes top-level keys, not nested ones
     expect($result)
         ->toHaveKey('user', [
             'name' => 'John Doe',

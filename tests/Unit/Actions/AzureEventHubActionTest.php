@@ -17,7 +17,6 @@ test('azure event hub action can generate token', function () {
 });
 
 test('azure event hub action can send event log model', function () {
-    // Mock the HTTP facade to avoid actual HTTP calls during testing
     Http::fake([
         'https://test-namespace.servicebus.windows.net/test-event-hub/messages*' => Http::response('OK', 200),
     ]);
@@ -31,12 +30,10 @@ test('azure event hub action can send event log model', function () {
         'request_ip' => '127.0.0.1',
     ]);
 
-    // This should not throw an exception
     expect(fn () => (new AzureEventHubAction)->send($eventLog))->not->toThrow(\Throwable::class);
 });
 
 test('azure event hub action handles malformed data gracefully', function () {
-    // Mock the HTTP facade
     Http::fake([
         'https://test-namespace.servicebus.windows.net/test-event-hub/messages*' => Http::response('OK', 200),
     ]);
@@ -44,7 +41,6 @@ test('azure event hub action handles malformed data gracefully', function () {
     /** @var mixed $malformedData */
     $malformedData = null;
 
-    // Should handle null data gracefully
     expect(fn () => (new AzureEventHubAction)->send($malformedData)) // @phpstan-ignore-line
         ->toThrow(\TypeError::class);
 });

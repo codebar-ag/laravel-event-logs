@@ -10,6 +10,18 @@ return [
     'enabled' => env('EVENT_LOGS_ENABLED', false),
 
     /*
+    |--------------------------------------------------------------------------
+    | Database Connection
+    |--------------------------------------------------------------------------
+    |
+    | Specify a custom database connection for event logs.
+    | Set to null to use the default database connection.
+    |
+    */
+
+    'connection' => env('EVENT_LOGS_CONNECTION', null),
+
+    /*
     | Provider-specific configuration
     | Add other providers later; keep Azure as the initial provider
     */
@@ -50,14 +62,12 @@ return [
     */
 
     'exclude_routes' => [
-        // Livewire
         'livewire-filepond.scripts',
         'livewire-filepond.styles',
         'livewire.preview-file',
         'livewire.update',
         'livewire.upload-file',
 
-        // Nova
         'nova.api.',
         'nova.asset.',
         'nova.pages.home',

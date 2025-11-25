@@ -20,12 +20,11 @@ class EventLogMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::user();
-
-        $enabled = (bool) config('laravel-event-logs.enabled', false);
-        if (! $enabled) {
+        if (! EventLog::isEnabled()) {
             return $next($request);
         }
+
+        $user = Auth::user();
 
         $excludeRoutesConfig = config('laravel-event-logs.exclude_routes', []);
         $excludeRoutes = is_array($excludeRoutesConfig)
