@@ -121,3 +121,49 @@ test('event log has correct fillable attributes', function () {
 
     expect((new EventLog)->getFillable())->toBe($fillable);
 });
+
+test('isEnabled returns false when disabled', function () {
+    config()->set('laravel-event-logs.enabled', false);
+    config()->set('laravel-event-logs.connection', 'testing');
+
+    expect(EventLog::isEnabled())->toBeFalse();
+});
+
+test('isEnabled returns false when connection is not configured', function () {
+    config()->set('laravel-event-logs.enabled', true);
+    config()->set('laravel-event-logs.connection', null);
+
+    expect(EventLog::isEnabled())->toBeFalse();
+});
+
+test('isEnabled returns false when connection is empty string', function () {
+    config()->set('laravel-event-logs.enabled', true);
+    config()->set('laravel-event-logs.connection', '');
+
+    expect(EventLog::isEnabled())->toBeFalse();
+});
+
+test('isEnabled returns true when enabled and connection is configured', function () {
+    config()->set('laravel-event-logs.enabled', true);
+    config()->set('laravel-event-logs.connection', 'testing');
+
+    expect(EventLog::isEnabled())->toBeTrue();
+});
+
+test('toArray returns AzureEventHubDTO array', function () {
+    $eventLog = EventLog::create([
+        'uuid' => 'test-uuid-123',
+        'type' => EventLogTypeEnum::HTTP,
+        'request_method' => 'POST',
+        'request_url' => 'https://example.com',
+    ]);
+
+    $array = $eventLog->toArray();
+
+    expect($array)->toBeArray();
+    expect($array['uuid'])->toBe('test-uuid-123');
+    expect($array['type'])->toBe(EventLogTypeEnum::HTTP->value);
+    expect($array['request_method'])->toBe('POST');
+    expect($array['request_url'])->toBe('https://example.com');
+    expect($array)->toHaveKey('created_at');
+});

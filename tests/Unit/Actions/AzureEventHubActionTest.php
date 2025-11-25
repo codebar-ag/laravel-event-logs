@@ -64,3 +64,52 @@ test('azure event hub configuration is properly loaded', function () {
     expect($azure['policy_name'])->toBe('RootManageSharedAccessKey');
     expect($azure['primary_key'])->toBe('test-primary-key-for-testing-only');
 });
+
+test('azure event hub action generates correct resource url', function () {
+    $action = new AzureEventHubAction;
+
+    $resourceUrl = $action->resourceUrl();
+
+    expect($resourceUrl)->toBeString();
+    expect($resourceUrl)->toContain('test-namespace.servicebus.windows.net');
+    expect($resourceUrl)->toContain('test-event-hub');
+});
+
+test('azure event hub action handles endpoint with trailing slash', function () {
+    config()->set('laravel-event-logs.providers.azure_event_hub.endpoint', 'https://test-namespace.servicebus.windows.net/');
+    config()->set('laravel-event-logs.providers.azure_event_hub.path', '/test-event-hub/');
+
+    $action = new AzureEventHubAction;
+
+    $resourceUrl = $action->resourceUrl();
+
+    expect($resourceUrl)->toBeString();
+    expect($resourceUrl)->not->toContain('//');
+});
+
+test('azure event hub action handles missing config values', function () {
+    config()->set('laravel-event-logs.providers.azure_event_hub', []);
+
+    $action = new AzureEventHubAction;
+
+    $token = $action->buildToken();
+
+    expect($token)->toBeString();
+    expect($token)->toContain('SharedAccessSignature');
+});
+
+test('azure event hub action handles non-string config values', function () {
+    config()->set('laravel-event-logs.providers.azure_event_hub', [
+        'endpoint' => 123,
+        'path' => null,
+        'policy_name' => false,
+        'primary_key' => [],
+    ]);
+
+    $action = new AzureEventHubAction;
+
+    $token = $action->buildToken();
+
+    expect($token)->toBeString();
+    expect($token)->toContain('SharedAccessSignature');
+});

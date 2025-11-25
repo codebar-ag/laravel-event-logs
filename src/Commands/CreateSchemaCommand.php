@@ -17,14 +17,14 @@ class CreateSchemaCommand extends Command
     {
         $connection = Config::get('laravel-event-logs.connection');
 
-        if (empty($connection)) {
+        if (empty($connection) || ! is_string($connection)) {
             $this->error('Event logs connection is not configured');
 
             return self::FAILURE;
         }
 
         $schemaExists = $this->schemaExists($connection, 'event_logs');
-        if (! $schemaExists) {
+        if ($schemaExists) {
             $this->info('Event logs schema already exists');
 
             return self::SUCCESS;
@@ -38,9 +38,9 @@ class CreateSchemaCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function schemaExists($connection, string $schema): bool
+    protected function schemaExists(string $connection, string $schema): bool
     {
-        return Schema::connection($connection->getName())
+        return Schema::connection($connection)
             ->getConnection()
             ->table('information_schema.schemata')
             ->where('schema_name', $schema)

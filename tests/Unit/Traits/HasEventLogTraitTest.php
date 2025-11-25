@@ -153,3 +153,75 @@ test('trait skips logging when disabled', function () {
 
     config()->set('laravel-event-logs.enabled', true);
 });
+
+test('trait logs event data with correct structure for created event', function () {
+    Auth::shouldReceive('user')->andReturn(null);
+    Auth::shouldReceive('id')->andReturn(null);
+
+    $model = new TestModel;
+    $model->name = 'John Doe';
+    $model->email = 'john@example.com';
+    $model->save();
+
+    $eventLog = EventLog::where('subject_type', TestModel::class)
+        ->where('event', EventLogEventEnum::CREATED)
+        ->first();
+
+    expect($eventLog)->not->toBeNull();
+    expect($eventLog->event_data)->toBeArray();
+    expect($eventLog->event_data['event'])->toBe('created');
+    expect($eventLog->event_data['model_type'])->toBe(TestModel::class);
+    expect($eventLog->event_data['model_id'])->toBe($model->id);
+    expect($eventLog->event_data)->toHaveKey('attributes');
+    expect($eventLog->event_data)->toHaveKey('changes');
+    expect($eventLog->event_data)->toHaveKey('original');
+});
+
+test('trait logs event data with correct structure for updated event', function () {
+    Auth::shouldReceive('user')->andReturn(null);
+    Auth::shouldReceive('id')->andReturn(null);
+
+    $model = new TestModel;
+    $model->name = 'John Doe';
+    $model->email = 'john@example.com';
+    $model->save();
+
+    $model->name = 'Jane Doe';
+    $model->save();
+
+    $eventLog = EventLog::where('subject_type', TestModel::class)
+        ->where('event', EventLogEventEnum::UPDATED)
+        ->first();
+
+    expect($eventLog)->not->toBeNull();
+    expect($eventLog->event_data)->toBeArray();
+    expect($eventLog->event_data['event'])->toBe('updated');
+    expect($eventLog->event_data['model_type'])->toBe(TestModel::class);
+    expect($eventLog->event_data['model_id'])->toBe($model->id);
+    expect($eventLog->event_data)->toHaveKey('attributes');
+    expect($eventLog->event_data)->toHaveKey('changes');
+    expect($eventLog->event_data)->toHaveKey('original');
+    expect($eventLog->event_data)->toHaveKey('dirty_keys');
+    expect($eventLog->event_data['dirty_keys'])->toContain('name');
+});
+
+test('trait sanitizes hidden attributes from event data', function () {
+    Auth::shouldReceive('user')->andReturn(null);
+    Auth::shouldReceive('id')->andReturn(null);
+
+    $model = new class extends TestModel
+    {
+        protected $hidden = ['email'];
+    };
+    $model->name = 'John Doe';
+    $model->email = 'hidden@example.com';
+    $model->save();
+
+    $eventLog = EventLog::where('subject_type', get_class($model))
+        ->where('event', EventLogEventEnum::CREATED)
+        ->first();
+
+    expect($eventLog)->not->toBeNull();
+    expect($eventLog->event_data['attributes'])->not->toHaveKey('email');
+    expect($eventLog->event_data['attributes'])->toHaveKey('name');
+});

@@ -149,3 +149,143 @@ test('middleware handles null route', function () {
     $eventLog = EventLog::where('request_route', null)->first();
     expect($eventLog)->not->toBeNull();
 });
+
+test('middleware sanitizes request headers', function () {
+    $route = Mockery::mock(Route::class);
+    $route->shouldReceive('getName')->andReturn('api.users.store');
+
+    $request = Request::create('https://example.com/api/users', 'POST');
+    $request->setRouteResolver(function () use ($route) {
+        return $route;
+    });
+    $request->server->set('REMOTE_ADDR', '127.0.0.1');
+    $request->headers->set('Authorization', 'Bearer token123');
+    $request->headers->set('Content-Type', 'application/json');
+    $request->headers->set('Cookie', 'session=abc123');
+
+    Auth::shouldReceive('user')->andReturn(null);
+    Auth::shouldReceive('id')->andReturn(null);
+
+    config()->set('laravel-event-logs.enabled', true);
+    config()->set('laravel-event-logs.exclude_routes', []);
+    config()->set('laravel-event-logs.sanitize.request_headers_exclude', ['authorization', 'cookie']);
+    config()->set('laravel-event-logs.sanitize.request_data_exclude', []);
+
+    $middleware = new EventLogMiddleware;
+    $response = new Response('OK', 200);
+
+    $middleware->handle($request, function ($req) use ($response) {
+        return $response;
+    });
+
+    $eventLog = EventLog::where('request_route', 'api.users.store')->first();
+    expect($eventLog)->not->toBeNull();
+    expect($eventLog->request_headers)->not->toHaveKey('authorization');
+    expect($eventLog->request_headers)->not->toHaveKey('cookie');
+    expect($eventLog->request_headers)->toHaveKey('content-type');
+});
+
+test('middleware sanitizes request data', function () {
+    $route = Mockery::mock(Route::class);
+    $route->shouldReceive('getName')->andReturn('api.users.store');
+
+    $request = Request::create('https://example.com/api/users', 'POST', [
+        'name' => 'John Doe',
+        'email' => 'john@example.com',
+        'password' => 'secret123',
+        'password_confirmation' => 'secret123',
+        'token' => 'abc123',
+    ]);
+    $request->setRouteResolver(function () use ($route) {
+        return $route;
+    });
+    $request->server->set('REMOTE_ADDR', '127.0.0.1');
+
+    Auth::shouldReceive('user')->andReturn(null);
+    Auth::shouldReceive('id')->andReturn(null);
+
+    config()->set('laravel-event-logs.enabled', true);
+    config()->set('laravel-event-logs.exclude_routes', []);
+    config()->set('laravel-event-logs.sanitize.request_headers_exclude', []);
+    config()->set('laravel-event-logs.sanitize.request_data_exclude', ['password', 'password_confirmation', 'token']);
+
+    $middleware = new EventLogMiddleware;
+    $response = new Response('OK', 200);
+
+    $middleware->handle($request, function ($req) use ($response) {
+        return $response;
+    });
+
+    $eventLog = EventLog::where('request_route', 'api.users.store')->first();
+    expect($eventLog)->not->toBeNull();
+    expect($eventLog->request_data)->not->toHaveKey('password');
+    expect($eventLog->request_data)->not->toHaveKey('password_confirmation');
+    expect($eventLog->request_data)->not->toHaveKey('token');
+    expect($eventLog->request_data)->toHaveKey('name');
+    expect($eventLog->request_data)->toHaveKey('email');
+});
+
+test('middleware handles authenticated user', function () {
+    $route = Mockery::mock(Route::class);
+    $route->shouldReceive('getName')->andReturn('api.users.store');
+
+    $request = Request::create('https://example.com/api/users', 'POST');
+    $request->setRouteResolver(function () use ($route) {
+        return $route;
+    });
+    $request->server->set('REMOTE_ADDR', '127.0.0.1');
+
+    $user = Mockery::mock('App\Models\User');
+    $user->shouldReceive('getKey')->andReturn(42);
+    $user->id = 42;
+
+    Auth::shouldReceive('user')->andReturn($user);
+    Auth::shouldReceive('id')->andReturn(42);
+
+    config()->set('laravel-event-logs.enabled', true);
+    config()->set('laravel-event-logs.exclude_routes', []);
+    config()->set('laravel-event-logs.sanitize.request_headers_exclude', []);
+    config()->set('laravel-event-logs.sanitize.request_data_exclude', []);
+
+    $middleware = new EventLogMiddleware;
+    $response = new Response('OK', 200);
+
+    $middleware->handle($request, function ($req) use ($response) {
+        return $response;
+    });
+
+    $eventLog = EventLog::where('request_route', 'api.users.store')->first();
+    expect($eventLog)->not->toBeNull();
+    expect($eventLog->user_id)->toBe(42);
+    expect($eventLog->user_type)->toContain('App_Models_User');
+});
+
+test('middleware handles exclude_routes as non-array', function () {
+    $route = Mockery::mock(Route::class);
+    $route->shouldReceive('getName')->andReturn('api.users.store');
+
+    $request = Request::create('https://example.com/api/users', 'POST');
+    $request->setRouteResolver(function () use ($route) {
+        return $route;
+    });
+    $request->server->set('REMOTE_ADDR', '127.0.0.1');
+
+    Auth::shouldReceive('user')->andReturn(null);
+    Auth::shouldReceive('id')->andReturn(null);
+
+    config()->set('laravel-event-logs.enabled', true);
+    config()->set('laravel-event-logs.exclude_routes', 'not-an-array');
+    config()->set('laravel-event-logs.sanitize.request_headers_exclude', []);
+    config()->set('laravel-event-logs.sanitize.request_data_exclude', []);
+
+    $middleware = new EventLogMiddleware;
+    $response = new Response('OK', 200);
+
+    $result = $middleware->handle($request, function ($req) use ($response) {
+        return $response;
+    });
+
+    expect($result)->toBe($response);
+    $eventLog = EventLog::where('request_route', 'api.users.store')->first();
+    expect($eventLog)->not->toBeNull();
+});

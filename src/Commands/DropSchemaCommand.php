@@ -16,7 +16,7 @@ class DropSchemaCommand extends Command
     {
         $connection = Config::get('laravel-event-logs.connection');
 
-        if (empty($connection)) {
+        if (empty($connection) || ! is_string($connection)) {
             $this->error('Event logs connection is not configured');
 
             return self::FAILURE;
@@ -34,18 +34,18 @@ class DropSchemaCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function schemaExists($connection, string $schema): bool
+    protected function schemaExists(string $connection, string $schema): bool
     {
-        return Schema::connection($connection->getName())
+        return Schema::connection($connection)
             ->getConnection()
             ->table('information_schema.schemata')
             ->where('schema_name', $schema)
             ->exists();
     }
 
-    protected function databaseExists($connection, string $database): bool
+    protected function databaseExists(string $connection, string $database): bool
     {
-        return Schema::connection($connection->getName())
+        return Schema::connection($connection)
             ->getConnection()
             ->table('INFORMATION_SCHEMA.SCHEMATA')
             ->where('SCHEMA_NAME', $database)
