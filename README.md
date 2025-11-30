@@ -45,6 +45,16 @@ php artisan vendor:publish --provider="CodebarAg\\LaravelEventLogs\\LaravelEvent
 
 This will publish the configuration file to `config/laravel-event-logs.php` where you can customize the package settings.
 
+### Publish Migrations (Optional)
+
+If you want to customize the migrations or need them in your application's `database/migrations` directory, you can publish them:
+
+```bash
+php artisan vendor:publish --tag=laravel-event-logs-migrations
+```
+
+**Note**: Migrations are automatically loaded from the package, so publishing is optional. However, if you plan to use the `event-logs:schema:create` command, it's recommended to publish the migrations first, or the command will automatically publish them for you.
+
 ## Configuration
 
 ### Database Connection
@@ -82,10 +92,11 @@ php artisan event-logs:schema:create
 
 This command will:
 - Check if the event logs connection is configured
-- Verify if the schema already exists
+- Verify if the `event_logs` table already exists
 - Run the migration to create the `event_logs` table if it doesn't exist
+- Automatically publish migrations if they haven't been published yet
 
-**Note**: The command requires the `connection` configuration to be set. If not configured, the command will fail with an error message.
+**Note**: The command requires the `connection` configuration to be set. If not configured, the command will fail with an error message. If migrations are not published, the command will automatically publish them before running the migration.
 
 #### Drop Schema
 

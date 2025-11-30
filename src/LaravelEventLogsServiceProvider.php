@@ -21,6 +21,10 @@ class LaravelEventLogsServiceProvider extends ServiceProvider
             __DIR__.'/../config/laravel-event-logs.php' => config_path('laravel-event-logs.php'),
         ], 'laravel-event-logs-config');
 
+        $this->publishes([
+            __DIR__.'/../database/migrations' => database_path('migrations'),
+        ], 'laravel-event-logs-migrations');
+
         if ($this->app->runningInConsole()) {
             $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
             $this->commands([
