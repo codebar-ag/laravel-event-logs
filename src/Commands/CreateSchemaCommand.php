@@ -18,7 +18,7 @@ class CreateSchemaCommand extends Command
     {
         $connection = Config::get('laravel-event-logs.connection');
 
-        if (empty($connection) || ! is_string($connection)) {
+        if (! is_string($connection) || $connection === '') {
             $this->error('Event logs connection is not configured');
 
             return self::FAILURE;

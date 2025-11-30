@@ -39,6 +39,7 @@ test('command handles schema drop when schema exists', function () {
         }
     };
     $command->setLaravel($this->app);
+    $command->setOutput(new OutputStyle(new ArrayInput([]), new BufferedOutput));
 
     $result = $command->handle();
 
@@ -74,6 +75,7 @@ test('command handles force option', function () {
         }
     };
     $command->setLaravel($this->app);
+    $command->setOutput(new OutputStyle(new ArrayInput([]), new BufferedOutput));
 
     $result = $command->handle();
 
