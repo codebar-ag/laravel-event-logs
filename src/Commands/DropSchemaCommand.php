@@ -22,33 +22,17 @@ class DropSchemaCommand extends Command
             return self::FAILURE;
         }
 
-        $schemaExists = $this->schemaExists($connection, 'event_logs');
-        if (! $schemaExists) {
-            $this->error('Event logs schema does not exist');
+        $tableExists = Schema::connection($connection)->hasTable('event_logs');
+        if (! $tableExists) {
+            $this->error('Event logs table does not exist');
 
             return self::SUCCESS;
         }
 
         Schema::connection($connection)->drop('event_logs');
 
+        $this->info('Event logs table dropped successfully');
+
         return self::SUCCESS;
-    }
-
-    protected function schemaExists(string $connection, string $schema): bool
-    {
-        return Schema::connection($connection)
-            ->getConnection()
-            ->table('information_schema.schemata')
-            ->where('schema_name', $schema)
-            ->exists();
-    }
-
-    protected function databaseExists(string $connection, string $database): bool
-    {
-        return Schema::connection($connection)
-            ->getConnection()
-            ->table('INFORMATION_SCHEMA.SCHEMATA')
-            ->where('SCHEMA_NAME', $database)
-            ->exists();
     }
 }
