@@ -64,14 +64,16 @@ class EventLog extends Model
 
     /**
      * Get the database connection name for the model.
-     *
-     * @return string|null
      */
-    public function getConnectionName()
+    public function getConnectionName(): ?string
     {
         $connection = Config::get('laravel-event-logs.connection');
 
-        return ! empty($connection) ? $connection : parent::getConnectionName();
+        if (! empty($connection) && is_string($connection)) {
+            return $connection;
+        }
+
+        return parent::getConnectionName();
     }
 
     /**
