@@ -13,6 +13,12 @@
         </testsuite>
     </testsuites>
 
+    <source>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+    </source>
+
     <coverage>
         <include>
             <directory suffix=".php">src</directory>
