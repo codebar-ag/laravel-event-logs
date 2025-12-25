@@ -7,7 +7,7 @@ use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
 use CodebarAg\LaravelEventLogs\Models\EventLog;
 use CodebarAg\LaravelEventLogs\Support\SanitizeHelper;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Context;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,7 +24,7 @@ class EventLogMiddleware
             return $next($request);
         }
 
-        $user = Auth::user();
+        $user = $this->resolveUser($request);
 
         $excludeRoutesConfig = config('laravel-event-logs.exclude_routes', []);
         $excludeRoutes = is_array($excludeRoutesConfig)
@@ -50,10 +50,11 @@ class EventLogMiddleware
             ? array_values(array_filter($dataExcludeConfig, static fn ($v): bool => is_string($v)))
             : [];
 
+        /** @var object{id: int|string}|null $user */
         EventLog::create([
             'type' => EventLogTypeEnum::HTTP,
             'user_type' => $user ? get_class($user) : null,
-            'user_id' => $user?->id,
+            'user_id' => $user !== null ? $user->id : null,
             'request_ip' => $request->ip(),
             'request_method' => $request->method(),
             'request_url' => $request->fullUrl(),
@@ -64,5 +65,24 @@ class EventLogMiddleware
         ]);
 
         return $next($request);
+    }
+
+    /**
+     * Resolve authenticated user from request.
+     * Checks all configured guards dynamically and guards from route middleware.
+     *
+     * @return object{id: int|string}|null
+     */
+    protected function resolveUser(Request $request): ?object
+    {
+        $guardsConfig = config('auth.guards', []);
+        /** @var array<string, mixed> $guardsConfig */
+        $guards = array_keys($guardsConfig);
+
+        /** @var array<int, string> $guards */
+        return Collection::make($guards)
+            ->map(fn (string $guard) => $request->user($guard))
+            ->filter()
+            ->first();
     }
 }

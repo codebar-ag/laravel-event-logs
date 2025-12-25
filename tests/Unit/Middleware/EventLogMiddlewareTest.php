@@ -228,18 +228,32 @@ test('middleware handles authenticated user', function () {
     $route = Mockery::mock(Route::class);
     $route->shouldReceive('getName')->andReturn('api.users.store');
 
+    $user = Mockery::mock('App\Models\User');
+    $user->shouldReceive('getKey')->andReturn(42);
+    $user->id = 42;
+
     $request = Request::create('https://example.com/api/users', 'POST');
     $request->setRouteResolver(function () use ($route) {
         return $route;
     });
     $request->server->set('REMOTE_ADDR', '127.0.0.1');
 
-    $user = Mockery::mock('App\Models\User');
-    $user->shouldReceive('getKey')->andReturn(42);
-    $user->id = 42;
+    // Set user resolver on the request - this works for the default guard
+    // But the middleware calls $request->user($guard) with specific guards
+    // So we also need to mock Auth::guard() for those guards
+    $request->setUserResolver(function () use ($user) {
+        return $user;
+    });
 
-    Auth::shouldReceive('user')->andReturn($user);
-    Auth::shouldReceive('id')->andReturn(42);
+    // Configure auth guards so the middleware can iterate through them
+    config()->set('auth.guards', [
+        'web' => ['driver' => 'session', 'provider' => 'users'],
+    ]);
+
+    // Mock Auth::guard() to return a guard that has the user for any guard
+    $guard = Mockery::mock();
+    $guard->shouldReceive('user')->andReturn($user);
+    Auth::shouldReceive('guard')->zeroOrMoreTimes()->andReturn($guard);
 
     config()->set('laravel-event-logs.enabled', true);
     config()->set('laravel-event-logs.exclude_routes', []);
