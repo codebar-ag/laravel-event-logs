@@ -1,5 +1,6 @@
 <?php
 
+use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
 use CodebarAg\LaravelEventLogs\LaravelEventLogsServiceProvider;
 use CodebarAg\LaravelEventLogs\Models\EventLog;
 use Illuminate\Support\Facades\Artisan;
@@ -37,7 +38,7 @@ test('service provider registers observer for EventLog model', function () {
     $provider->boot();
 
     $eventLog = new EventLog;
-    $eventLog->type = \CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum::HTTP;
+    $eventLog->type = EventLogTypeEnum::HTTP;
 
     $eventLog->save();
 

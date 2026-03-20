@@ -2,6 +2,7 @@
 
 namespace CodebarAg\LaravelEventLogs\Models;
 
+use Carbon\Carbon;
 use CodebarAg\LaravelEventLogs\Database\Factories\EventLogFactory;
 use CodebarAg\LaravelEventLogs\DTO\AzureEventHubDTO;
 use CodebarAg\LaravelEventLogs\Enums\EventLogEventEnum;
@@ -28,10 +29,10 @@ use Illuminate\Support\Facades\Config;
  * @property EventLogEventEnum|null $event
  * @property array<string, mixed>|null $event_data
  * @property array<string, mixed>|null $context
- * @property \Carbon\Carbon|null $synced_at
- * @property \Carbon\Carbon|null $sync_failed_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property Carbon|null $synced_at
+ * @property Carbon|null $sync_failed_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  *
  * @use HasFactory<EventLogFactory>
  */
