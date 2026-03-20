@@ -30,7 +30,7 @@ test('azure event hub action can send event log model', function () {
         'request_ip' => '127.0.0.1',
     ]);
 
-    expect(fn () => (new AzureEventHubAction)->send($eventLog))->not->toThrow(\Throwable::class);
+    expect(fn () => (new AzureEventHubAction)->send($eventLog))->not->toThrow(Throwable::class);
 });
 
 test('azure event hub action handles malformed data gracefully', function () {
@@ -42,7 +42,7 @@ test('azure event hub action handles malformed data gracefully', function () {
     $malformedData = null;
 
     expect(fn () => (new AzureEventHubAction)->send($malformedData)) // @phpstan-ignore-line
-        ->toThrow(\TypeError::class);
+        ->toThrow(TypeError::class);
 });
 
 test('azure event hub configuration is properly loaded', function () {

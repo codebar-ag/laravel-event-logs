@@ -5,6 +5,7 @@ use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
 use CodebarAg\LaravelEventLogs\Models\EventLog;
 use CodebarAg\LaravelEventLogs\Traits\HasEventLogTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 class TestModel extends Model
@@ -80,7 +81,7 @@ test('trait can log restored event', function () {
 
     $model = new class extends TestModel
     {
-        use Illuminate\Database\Eloquent\SoftDeletes;
+        use SoftDeletes;
     };
     $model->name = 'John Doe';
     $model->email = 'john@example.com';
