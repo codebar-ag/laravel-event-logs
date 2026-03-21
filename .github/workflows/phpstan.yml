@@ -1,28 +1,42 @@
-name: PHPStan Static Analysis
+name: PHPStan
 
 on:
   push:
-    branches: [ main, develop ]
+    paths:
+      - '**/*.php'
+      - 'phpstan.neon.dist'
+      - 'phpstan-baseline.neon'
+      - 'composer.json'
+      - 'composer.lock'
   pull_request:
-    branches: [ main, develop ]
+    paths:
+      - '**/*.php'
+      - 'phpstan.neon.dist'
+      - 'phpstan-baseline.neon'
+      - 'composer.json'
+      - 'composer.lock'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   phpstan:
-    name: PHPStan Analysis
+    name: phpstan
     runs-on: ubuntu-latest
-
+    timeout-minutes: 5
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: dom, curl, fileinfo, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
+          coverage: none
 
-      - name: Install Composer Dependencies
-        run: composer install --no-progress --prefer-dist --no-interaction --optimize-autoloader
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v4
 
-      - name: Run PHPStan Analysis
-        run: ./vendor/bin/phpstan analyse --configuration=phpstan.neon
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan --error-format=github
