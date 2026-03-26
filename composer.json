@@ -3,6 +3,14 @@
   "description": "Event logging for HTTP requests and model events with pluggable providers.",
   "type": "library",
   "license": "MIT",
+  "authors": [
+        {
+            "name": "Sebastian Bürgin-Fix",
+            "email": "helpdesk@codebar.ch",
+            "homepage": "https://www.codebar.ch",
+            "role": "Software-Engineer"
+        }
+    ],
   "require": {
     "php": "^8.4",
     "illuminate/support": "^12.0",
