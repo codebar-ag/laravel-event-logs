@@ -17,13 +17,15 @@ use Illuminate\Support\Facades\Config;
  * @property string $uuid
  * @property EventLogTypeEnum|null $type
  * @property string|null $subject_type
- * @property int|null $subject_id
+ * @property string|null $subject_id
  * @property string|null $user_type
  * @property int|null $user_id
  * @property string|null $request_ip
  * @property string|null $request_method
  * @property string|null $request_url
  * @property string|null $request_route
+ * @property int|null $response_status
+ * @property int|null $duration_ms
  * @property array<string, mixed>|null $request_headers
  * @property array<string, mixed>|null $request_data
  * @property EventLogEventEnum|null $event
@@ -51,6 +53,8 @@ class EventLog extends Model
         'user_type',
         'user_id',
         'request_route',
+        'response_status',
+        'duration_ms',
         'request_method',
         'request_url',
         'request_ip',
@@ -105,6 +109,9 @@ class EventLog extends Model
         'context' => 'array',
         'synced_at' => 'datetime',
         'sync_failed_at' => 'datetime',
+        'response_status' => 'integer',
+        'duration_ms' => 'integer',
+        'subject_id' => 'string',
     ];
 
     /**
@@ -117,9 +124,23 @@ class EventLog extends Model
         return $query->whereNull('sync_failed_at')->whereNull('synced_at');
     }
 
-    public function toArray(): array
+    /**
+     * Payload shape for outbound providers (e.g. Azure Event Hubs).
+     *
+     * @return array<string, mixed>
+     */
+    public function toProviderPayload(): array
     {
         return AzureEventHubDTO::fromEventLog($this)->toArray();
+    }
+
+    public function toArray(): array
+    {
+        if (Config::get('laravel-event-logs.legacy_to_array_provider_payload', true)) {
+            return $this->toProviderPayload();
+        }
+
+        return parent::toArray();
     }
 
     /**

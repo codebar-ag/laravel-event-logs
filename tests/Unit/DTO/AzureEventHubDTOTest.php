@@ -31,10 +31,12 @@ test('AzureEventHubDTO maps EventLog fields correctly', function () {
     expect($dto->type)->toBe(EventLogTypeEnum::HTTP);
     expect($dto->event)->toBe(EventLogEventEnum::CREATED);
     expect($dto->subject_type)->toBe('App\\Models\\User');
-    expect($dto->subject_id)->toBe(42);
+    expect($dto->subject_id)->toBe('42');
     expect($dto->user_type)->toBe('App\\Models\\User');
     expect($dto->user_id)->toBe(7);
     expect($dto->request_route)->toBe('users.show');
+    expect($dto->response_status)->toBeNull();
+    expect($dto->duration_ms)->toBeNull();
     expect($dto->request_method)->toBe('GET');
     expect($dto->request_url)->toBe('https://example.com/users/42');
     expect($dto->request_ip)->toBe('127.0.0.1');
@@ -48,10 +50,12 @@ test('AzureEventHubDTO maps EventLog fields correctly', function () {
     expect($array['type'])->toBe(EventLogTypeEnum::HTTP->value);
     expect($array['event'])->toBe(EventLogEventEnum::CREATED->value);
     expect($array['subject_type'])->toBe('App\\Models\\User');
-    expect($array['subject_id'])->toBe(42);
+    expect($array['subject_id'])->toBe('42');
     expect($array['user_type'])->toBe('App\\Models\\User');
     expect($array['user_id'])->toBe(7);
     expect($array['request_route'])->toBe('users.show');
+    expect($array['response_status'])->toBeNull();
+    expect($array['duration_ms'])->toBeNull();
     expect($array['request_method'])->toBe('GET');
     expect($array['request_url'])->toBe('https://example.com/users/42');
     expect($array['request_ip'])->toBe('127.0.0.1');
@@ -78,6 +82,8 @@ test('AzureEventHubDTO handles null values correctly', function () {
     expect($dto->user_type)->toBeNull();
     expect($dto->user_id)->toBeNull();
     expect($dto->request_route)->toBeNull();
+    expect($dto->response_status)->toBeNull();
+    expect($dto->duration_ms)->toBeNull();
     expect($dto->request_method)->toBeNull();
     expect($dto->request_url)->toBeNull();
     expect($dto->request_ip)->toBeNull();
@@ -94,6 +100,8 @@ test('AzureEventHubDTO handles null values correctly', function () {
     expect($array['user_type'])->toBeNull();
     expect($array['user_id'])->toBeNull();
     expect($array['request_route'])->toBeNull();
+    expect($array['response_status'])->toBeNull();
+    expect($array['duration_ms'])->toBeNull();
     expect($array['request_method'])->toBeNull();
     expect($array['request_url'])->toBeNull();
     expect($array['request_ip'])->toBeNull();

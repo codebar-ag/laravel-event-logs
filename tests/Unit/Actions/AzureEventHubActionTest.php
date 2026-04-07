@@ -1,10 +1,22 @@
 <?php
 
 use CodebarAg\LaravelEventLogs\Actions\AzureEventHubAction;
+use CodebarAg\LaravelEventLogs\Contracts\EventLogTransport;
 use CodebarAg\LaravelEventLogs\Enums\EventLogEventEnum;
 use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
 use CodebarAg\LaravelEventLogs\Models\EventLog;
+use CodebarAg\LaravelEventLogs\Transports\AzureEventHubTransport;
 use Illuminate\Support\Facades\Http;
+
+test('azure event hub transport caches sas token', function () {
+    $transport = new AzureEventHubTransport;
+
+    expect($transport->buildToken())->toBe($transport->buildToken());
+});
+
+test('container resolves transport as event log transport contract', function () {
+    expect(app(EventLogTransport::class))->toBeInstanceOf(AzureEventHubTransport::class);
+});
 
 test('azure event hub action can generate token', function () {
     $token = (new AzureEventHubAction)->buildToken();

@@ -2,3 +2,4 @@
 auth.json
 test/*
 .phpunit.cache/
+/phpunit.xml
