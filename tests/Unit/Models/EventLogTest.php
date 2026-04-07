@@ -27,7 +27,7 @@ test('event log can be created with all attributes', function () {
         ->uuid->toBe('test-uuid-123')
         ->type->toBe(EventLogTypeEnum::MODEL)
         ->subject_type->toBe('App\Models\User')
-        ->subject_id->toBe(1)
+        ->subject_id->toBe('1')
         ->user_type->toBe('App\Models\User')
         ->user_id->toBe(1)
         ->request_route->toBe('api.users.store')
@@ -107,6 +107,8 @@ test('event log has correct fillable attributes', function () {
         'user_type',
         'user_id',
         'request_route',
+        'response_status',
+        'duration_ms',
         'request_method',
         'request_url',
         'request_ip',
@@ -150,7 +152,7 @@ test('isEnabled returns true when enabled and connection is configured', functio
     expect(EventLog::isEnabled())->toBeTrue();
 });
 
-test('toArray returns AzureEventHubDTO array', function () {
+test('toProviderPayload returns AzureEventHubDTO array', function () {
     $eventLog = EventLog::create([
         'uuid' => 'test-uuid-123',
         'type' => EventLogTypeEnum::HTTP,
@@ -158,7 +160,7 @@ test('toArray returns AzureEventHubDTO array', function () {
         'request_url' => 'https://example.com',
     ]);
 
-    $array = $eventLog->toArray();
+    $array = $eventLog->toProviderPayload();
 
     expect($array)->toBeArray();
     expect($array['uuid'])->toBe('test-uuid-123');
@@ -166,4 +168,33 @@ test('toArray returns AzureEventHubDTO array', function () {
     expect($array['request_method'])->toBe('POST');
     expect($array['request_url'])->toBe('https://example.com');
     expect($array)->toHaveKey('created_at');
+});
+
+test('toArray matches legacy provider payload when legacy flag is true', function () {
+    config()->set('laravel-event-logs.legacy_to_array_provider_payload', true);
+
+    $eventLog = EventLog::create([
+        'uuid' => 'test-uuid-legacy',
+        'type' => EventLogTypeEnum::HTTP,
+        'request_method' => 'GET',
+        'request_url' => 'https://example.com',
+    ]);
+
+    expect($eventLog->toArray())->toBe($eventLog->toProviderPayload());
+});
+
+test('toArray uses parent when legacy flag is false', function () {
+    config()->set('laravel-event-logs.legacy_to_array_provider_payload', false);
+
+    $eventLog = EventLog::create([
+        'uuid' => 'test-uuid-eloquent',
+        'type' => EventLogTypeEnum::HTTP,
+        'request_method' => 'GET',
+        'request_url' => 'https://example.com',
+    ]);
+
+    $array = $eventLog->toArray();
+    expect($array)->toHaveKey('id');
+    expect($array)->toHaveKey('uuid');
+    expect($array['uuid'])->toBe('test-uuid-eloquent');
 });

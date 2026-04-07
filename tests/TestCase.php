@@ -69,5 +69,11 @@ abstract class TestCase extends Orchestra
 
         $migration = include __DIR__.'/../database/migrations/2025_08_09_115521_create_event_logs_table.php';
         $migration->up();
+
+        $responseMetricsMigration = include __DIR__.'/../database/migrations/2026_04_07_120000_add_response_metrics_to_event_logs_table.php';
+        $responseMetricsMigration->up();
+
+        $subjectAndIndexMigration = include __DIR__.'/../database/migrations/2026_04_07_120001_alter_event_logs_subject_id_and_sync_index.php';
+        $subjectAndIndexMigration->up();
     }
 }

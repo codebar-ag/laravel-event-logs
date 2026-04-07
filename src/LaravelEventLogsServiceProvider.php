@@ -4,8 +4,10 @@ namespace CodebarAg\LaravelEventLogs;
 
 use CodebarAg\LaravelEventLogs\Commands\CreateSchemaCommand;
 use CodebarAg\LaravelEventLogs\Commands\DropSchemaCommand;
+use CodebarAg\LaravelEventLogs\Contracts\EventLogTransport;
 use CodebarAg\LaravelEventLogs\Models\EventLog;
 use CodebarAg\LaravelEventLogs\Observers\EventLogObserver;
+use CodebarAg\LaravelEventLogs\Transports\AzureEventHubTransport;
 use Illuminate\Support\ServiceProvider;
 
 class LaravelEventLogsServiceProvider extends ServiceProvider
@@ -13,6 +15,9 @@ class LaravelEventLogsServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/laravel-event-logs.php', 'laravel-event-logs');
+
+        $this->app->singleton(AzureEventHubTransport::class);
+        $this->app->bind(EventLogTransport::class, AzureEventHubTransport::class);
     }
 
     public function boot(): void
