@@ -10,13 +10,6 @@ return [
     'enabled' => env('EVENT_LOGS_ENABLED', false),
 
     /*
-    | When true, EventLog::toArray() returns the Azure export shape (legacy).
-    | Prefer calling toProviderPayload() for exports; set false for standard Eloquent arrays.
-    */
-
-    'legacy_to_array_provider_payload' => env('EVENT_LOGS_LEGACY_TO_ARRAY', true),
-
-    /*
     |--------------------------------------------------------------------------
     | Persistence
     |--------------------------------------------------------------------------
@@ -34,44 +27,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Default outbound transport (extensible)
-    |--------------------------------------------------------------------------
-    */
-
-    'default_transport' => env('EVENT_LOGS_DEFAULT_TRANSPORT', 'azure_event_hub'),
-
-    /*
-    |--------------------------------------------------------------------------
     | Database Connection
     |--------------------------------------------------------------------------
     |
-    | Specify a custom database connection for event logs.
-    | Set to null to use the default database connection.
+    | Specify the database connection for event_logs (recommended: a dedicated connection).
+    | Required when enabled is true (non-empty string).
     |
     */
 
     'connection' => env('EVENT_LOGS_CONNECTION', null),
-
-    /*
-    | Provider-specific configuration
-    | Add other providers later; keep Azure as the initial provider
-    */
-    'providers' => [
-        'azure_event_hub' => [
-            'driver' => 'azure_event_hub',
-            'endpoint' => env('AZURE_EVENT_HUB_ENDPOINT'),
-            'path' => env('AZURE_EVENT_HUB_PATH'),
-            'primary_key' => env('AZURE_EVENT_HUB_PRIMARY_KEY'),
-            'policy_name' => env('AZURE_EVENT_HUB_POLICY'),
-            'cache_sas_token' => env('AZURE_EVENT_HUB_CACHE_SAS_TOKEN', true),
-            'token_cache_buffer_seconds' => env('AZURE_EVENT_HUB_TOKEN_CACHE_BUFFER') !== null && env('AZURE_EVENT_HUB_TOKEN_CACHE_BUFFER') !== ''
-                ? (int) env('AZURE_EVENT_HUB_TOKEN_CACHE_BUFFER')
-                : 60,
-            'sas_ttl_seconds' => env('AZURE_EVENT_HUB_SAS_TTL') !== null && env('AZURE_EVENT_HUB_SAS_TTL') !== ''
-                ? (int) env('AZURE_EVENT_HUB_SAS_TTL')
-                : 7200,
-        ],
-    ],
 
     /*
     |--------------------------------------------------------------------------

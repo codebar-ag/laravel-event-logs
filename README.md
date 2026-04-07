@@ -9,7 +9,7 @@
 [![PHPStan](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/phpstan.yml/badge.svg)](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/phpstan.yml)
 [![Coverage](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/pest-coverage.yml/badge.svg)](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/pest-coverage.yml)
 
-This package provides event logging for HTTP requests and model events. It is provider-agnostic and supports pluggable transports. The initial provider implementation ships an Azure Event Hub sender.
+This package records HTTP requests and model lifecycle events as rows in your database. Configure a **dedicated database connection** for the `event_logs` table so logging stays isolated from your primary application data.
 
 ## Table of Contents
 
@@ -23,14 +23,13 @@ This package provides event logging for HTTP requests and model events. It is pr
 - [Usage](#usage)
   - [Middleware Request Logging](#middleware-request-logging)
   - [Model Event Logging](#model-event-logging)
-  - [Sending Logs to Azure Event Hub](#sending-logs-to-azure-event-hub)
   - [Adding Context](#adding-context)
 
 ## Requirements
 
 - Laravel 13+
 - PHP 8.3+
-- Azure Event Hub subscription (optional; only if you send to Event Hubs)
+- A database connection for event logs (can be your default connection, but a separate connection is recommended)
 
 ## Installation
 
@@ -132,10 +131,7 @@ Published defaults live in `config/laravel-event-logs.php`. Common keys (see the
 |------|------------|
 | Feature toggle | `enabled` (`EVENT_LOGS_ENABLED`) |
 | DB connection | `connection` (`EVENT_LOGS_CONNECTION`) — required when enabled |
-| Legacy `toArray()` | `legacy_to_array_provider_payload` (`EVENT_LOGS_LEGACY_TO_ARRAY`) |
 | Writes | `persist_mode` (`EVENT_LOGS_PERSIST_MODE`: `sync` or `queued`), `queue.connection`, `queue.queue` |
-| Outbound default | `default_transport` (`EVENT_LOGS_DEFAULT_TRANSPORT`) |
-| Azure | `providers.azure_event_hub.*` — `endpoint`, `path`, `primary_key`, `policy_name` (from `AZURE_EVENT_HUB_POLICY`), `cache_sas_token`, `token_cache_buffer_seconds`, `sas_ttl_seconds` |
 | Sanitization | `sanitize.request_headers_exclude`, `sanitize.request_data_exclude` |
 | Context stored on rows | `context.enabled`, `context.allow_keys` (comma-separated env `EVENT_LOGS_CONTEXT_ALLOW_KEYS`), `context.max_keys`, `context.max_json_bytes` |
 | HTTP user lookup | `user_resolution.guards`, `user_resolution.scan_all_guards` |
@@ -143,19 +139,27 @@ Published defaults live in `config/laravel-event-logs.php`. Common keys (see the
 
 ## Upgrading
 
+The migration that changes `subject_id` from integer to string ([`2026_04_07_120001_alter_event_logs_subject_id_and_sync_index.php`](database/migrations/2026_04_07_120001_alter_event_logs_subject_id_and_sync_index.php)) uses `->change()`. On **MySQL, PostgreSQL, and SQL Server**, Laravel needs the Doctrine DBAL package for that operation. Install it in your application before migrating:
+
+```bash
+composer require doctrine/dbal
+```
+
+SQLite (including typical local tests) usually does not require DBAL for this change.
+
 Run new package migrations (or republish and migrate) so your `event_logs` table gains:
 
 - `response_status` and `duration_ms` (HTTP rows are written in `terminate()` so status and timing are available)
 - `subject_id` as a string (UUID-friendly)
-- composite index `event_logs_sync_pending_index` on `(synced_at, sync_failed_at)` for unsynced queries
+- Removal of `synced_at`, `sync_failed_at`, and the `event_logs_sync_pending_index` index (database-only package; migration `2026_04_08_120000_remove_event_logs_outbound_sync_columns.php`)
 
 **HTTP middleware** must remain a **terminable** middleware in the stack (Laravel invokes `terminate()` automatically when registered via `append` / the HTTP kernel). If you only call `handle()` in custom tests, call `terminate($request, $response)` yourself.
 
-**Backward compatibility**
+**Breaking changes (recent versions)**
 
-- `EventLog::toArray()` still returns the Azure export shape when `legacy_to_array_provider_payload` is `true` (default). Prefer `toProviderPayload()` for outbound integrations.
+- Azure Event Hubs and `EventLogTransport` were removed; logs are stored only in the database.
+- `EventLog::toProviderPayload()`, `legacy_to_array_provider_payload`, and Azure-shaped `toArray()` are removed; use normal Eloquent `toArray()` / API resources as needed.
 - `exclude_routes_match` defaults to `exact`. Use `auto` or `wildcard` so patterns like `nova.api.` or `livewire.*` work as intended.
-- `AzureEventHubAction` is deprecated; use `AzureEventHubTransport` or inject `EventLogTransport`.
 
 ## Usage
 
@@ -198,15 +202,6 @@ return [
             'token',
         ],
     ],
-    'providers' => [
-        'azure_event_hub' => [
-            'driver' => 'azure_event_hub',
-            'endpoint' => env('AZURE_EVENT_HUB_ENDPOINT'),
-            'path' => env('AZURE_EVENT_HUB_PATH'),
-            'policy_name' => env('AZURE_EVENT_HUB_POLICY', 'RootManageSharedAccessKey'),
-            'primary_key' => env('AZURE_EVENT_HUB_PRIMARY_KEY'),
-        ],
-    ],
 ];
 ```
 
@@ -241,7 +236,7 @@ Optional: set `persist_mode` to `queued` and configure `queue.connection` / `que
 #### Example Output
 
 ```php
-// Shape from EventLog::toProviderPayload() (or legacy toArray() when enabled)
+// Illustrative attributes persisted on the event_logs row (see EventLog model / toArray())
 [
     'uuid' => '550e8400-e29b-41d4-a716-446655440000',
     'type' => 'http',
@@ -262,115 +257,6 @@ Optional: set `persist_mode` to `queued` and configure `queue.connection` / `que
     'context' => ['locale' => 'de_CH', 'environment' => 'production'],
     'created_at' => '2024-01-15T10:30:00+00:00',
 ]
-```
-
-### Sending Logs to Azure Event Hub
-
-The package provides `AzureEventHubTransport` implementing `EventLogTransport` to send event logs to Azure Event Hub. Resolve it from the container or use `AzureEventHubAction` (deprecated alias). You can process sends in background jobs for better performance.
-
-#### Configuration
-
-Add your Azure Event Hub credentials to the published config file under `providers.azure_event_hub`:
-
-```php
-// config/laravel-event-logs.php (Azure section)
-'providers' => [
-    'azure_event_hub' => [
-        'driver' => 'azure_event_hub',
-        'endpoint' => env('AZURE_EVENT_HUB_ENDPOINT'),
-        'path' => env('AZURE_EVENT_HUB_PATH'),
-        'policy_name' => env('AZURE_EVENT_HUB_POLICY', 'RootManageSharedAccessKey'),
-        'primary_key' => env('AZURE_EVENT_HUB_PRIMARY_KEY'),
-        'cache_sas_token' => env('AZURE_EVENT_HUB_CACHE_SAS_TOKEN', true),
-        'token_cache_buffer_seconds' => 60,
-        'sas_ttl_seconds' => 7200,
-    ],
-],
-```
-
-#### Environment Variables
-
-```bash
-AZURE_EVENT_HUB_ENDPOINT=https://your-namespace.servicebus.windows.net
-AZURE_EVENT_HUB_PATH=your-event-hub-name
-AZURE_EVENT_HUB_POLICY=RootManageSharedAccessKey
-AZURE_EVENT_HUB_PRIMARY_KEY=your-primary-key
-# Optional SAS tuning:
-# AZURE_EVENT_HUB_CACHE_SAS_TOKEN=true
-# AZURE_EVENT_HUB_TOKEN_CACHE_BUFFER=60
-# AZURE_EVENT_HUB_SAS_TTL=7200
-```
-
-#### Available methods
-
-- **`EventLogTransport::send(EventLog $eventLog): \Illuminate\Http\Client\Response`**: Sends one row to Azure Event Hubs REST (`.../messages?api-version=2014-01`). The JSON body is `EventLog::toProviderPayload()` (not legacy `toArray()` unless you still use that mode for something else).
-- Prefer the container: `app(\CodebarAg\LaravelEventLogs\Contracts\EventLogTransport::class)->send($eventLog)`.
-- **`AzureEventHubAction`** remains as a **deprecated** subclass of `AzureEventHubTransport` for backward compatibility.
-
-Minimal usage:
-
-```php
-use CodebarAg\LaravelEventLogs\Contracts\EventLogTransport;
-use CodebarAg\LaravelEventLogs\Models\EventLog;
-
-/** @var EventLog $eventLog */
-app(EventLogTransport::class)->send($eventLog);
-```
-
-Deprecated (equivalent):
-
-```php
-use CodebarAg\LaravelEventLogs\Actions\AzureEventHubAction;
-
-(new AzureEventHubAction)->send($eventLog);
-```
-
-#### Example Implementation
-
-Create a job to process and send event logs to Azure Event Hub:
-
-```php
-<?php
-
-namespace App\Jobs;
-
-use CodebarAg\LaravelEventLogs\Contracts\EventLogTransport;
-use CodebarAg\LaravelEventLogs\Models\EventLog;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-
-class ProcessAzureEventJob implements ShouldQueue
-{
-    use Queueable;
-
-    public function __construct(
-        private EventLog $eventLog
-    ) {}
-
-    public function handle(EventLogTransport $transport): void
-    {
-        if (! config('laravel-event-logs.enabled') || ! EventLog::isEnabled()) {
-            return;
-        }
-
-        if ($this->eventLog->synced_at) {
-            return;
-        }
-
-        $transport->send($this->eventLog);
-
-        $this->eventLog->update([
-            'synced_at' => now(),
-        ]);
-    }
-
-    public function failed(\Throwable $exception): void
-    {
-        $this->eventLog->update([
-            'synced_at' => null,
-        ]);
-    }
-}
 ```
 
 ### Model Event Logging
@@ -417,7 +303,7 @@ Each model event logs:
 #### Example Output
 
 ```php
-// Using EventLog::toProviderPayload() when a User model is created:
+// Illustrative attributes when a User model is created:
 [
     'uuid' => '550e8400-e29b-41d4-a716-446655440000',
     'type' => 'model',

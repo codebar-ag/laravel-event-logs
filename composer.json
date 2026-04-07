@@ -1,6 +1,6 @@
 {
   "name": "codebar-ag/laravel-event-logs",
-  "description": "Event logging for HTTP requests and model events with pluggable providers.",
+  "description": "Event logging for HTTP requests and model events to a dedicated database connection.",
   "type": "library",
   "license": "MIT",
   "authors": [
@@ -19,6 +19,9 @@
     "illuminate/database": "^13.0",
     "illuminate/http": "^13.0",
     "illuminate/pipeline": "^13.0"
+  },
+  "suggest": {
+    "doctrine/dbal": "Install when running migrations that alter existing columns with ->change() (e.g. widening subject_id to string) on MySQL, PostgreSQL, or SQL Server."
   },
   "require-dev": {
     "larastan/larastan": "^3.9.3",

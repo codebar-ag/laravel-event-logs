@@ -10,6 +10,7 @@ use CodebarAg\LaravelEventLogs\Support\EventLogRecorder;
 use CodebarAg\LaravelEventLogs\Support\RouteExclusion;
 use CodebarAg\LaravelEventLogs\Support\SanitizeHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -90,8 +91,8 @@ class EventLogMiddleware
             return;
         }
 
-        $startedAt = $pending['started_at'] ?? null;
-        $payloadRaw = $pending['payload'] ?? null;
+        $startedAt = Arr::get($pending, 'started_at');
+        $payloadRaw = Arr::get($pending, 'payload');
         if (! is_array($payloadRaw)) {
             return;
         }
@@ -116,9 +117,8 @@ class EventLogMiddleware
      */
     protected function resolveUser(Request $request): ?object
     {
-        $resolution = config('laravel-event-logs.user_resolution', []);
-        $configuredGuards = is_array($resolution) ? ($resolution['guards'] ?? null) : null;
-        $scanAll = (bool) (is_array($resolution) ? ($resolution['scan_all_guards'] ?? false) : false);
+        $configuredGuards = config('laravel-event-logs.user_resolution.guards');
+        $scanAll = (bool) config('laravel-event-logs.user_resolution.scan_all_guards', false);
 
         if (is_array($configuredGuards) && $configuredGuards !== []) {
             /** @var array<int, string> $configuredGuards */

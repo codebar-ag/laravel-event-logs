@@ -20,6 +20,10 @@ class RecordEventLogJob implements ShouldQueue
 
     public function handle(): void
     {
+        if (! EventLog::isEnabled()) {
+            return;
+        }
+
         EventLog::create($this->payload);
     }
 }

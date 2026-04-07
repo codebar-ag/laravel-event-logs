@@ -31,14 +31,6 @@ abstract class TestCase extends Orchestra
         $app['config']->set('laravel-event-logs', [
             'enabled' => true,
             'connection' => 'testing',
-            'providers' => [
-                'azure_event_hub' => [
-                    'endpoint' => env('AZURE_EVENT_HUB_ENDPOINT', 'https://test-namespace.servicebus.windows.net'),
-                    'path' => env('AZURE_EVENT_HUB_PATH', 'test-event-hub'),
-                    'policy_name' => env('AZURE_EVENT_HUB_POLICY_NAME', 'RootManageSharedAccessKey'),
-                    'primary_key' => env('AZURE_EVENT_HUB_PRIMARY_KEY', 'test-primary-key-for-testing-only'),
-                ],
-            ],
             'exclude_routes' => env('EVENT_LOGS_EXCLUDE_ROUTES', []),
             'sanitize' => [
                 'request_headers_exclude' => [
@@ -73,7 +65,10 @@ abstract class TestCase extends Orchestra
         $responseMetricsMigration = include __DIR__.'/../database/migrations/2026_04_07_120000_add_response_metrics_to_event_logs_table.php';
         $responseMetricsMigration->up();
 
-        $subjectAndIndexMigration = include __DIR__.'/../database/migrations/2026_04_07_120001_alter_event_logs_subject_id_and_sync_index.php';
-        $subjectAndIndexMigration->up();
+        $subjectMigration = include __DIR__.'/../database/migrations/2026_04_07_120001_alter_event_logs_subject_id_and_sync_index.php';
+        $subjectMigration->up();
+
+        $removeSyncMigration = include __DIR__.'/../database/migrations/2026_04_08_120000_remove_event_logs_outbound_sync_columns.php';
+        $removeSyncMigration->up();
     }
 }

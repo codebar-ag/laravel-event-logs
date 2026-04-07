@@ -4,10 +4,8 @@ namespace CodebarAg\LaravelEventLogs\Models;
 
 use Carbon\Carbon;
 use CodebarAg\LaravelEventLogs\Database\Factories\EventLogFactory;
-use CodebarAg\LaravelEventLogs\DTO\AzureEventHubDTO;
 use CodebarAg\LaravelEventLogs\Enums\EventLogEventEnum;
 use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Config;
@@ -31,8 +29,6 @@ use Illuminate\Support\Facades\Config;
  * @property EventLogEventEnum|null $event
  * @property array<string, mixed>|null $event_data
  * @property array<string, mixed>|null $context
- * @property Carbon|null $synced_at
- * @property Carbon|null $sync_failed_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  *
@@ -63,8 +59,6 @@ class EventLog extends Model
         'event',
         'event_data',
         'context',
-        'synced_at',
-        'sync_failed_at',
     ];
 
     /**
@@ -107,41 +101,10 @@ class EventLog extends Model
         'event' => EventLogEventEnum::class,
         'event_data' => 'array',
         'context' => 'array',
-        'synced_at' => 'datetime',
-        'sync_failed_at' => 'datetime',
         'response_status' => 'integer',
         'duration_ms' => 'integer',
         'subject_id' => 'string',
     ];
-
-    /**
-     * @param  Builder<EventLog>  $query
-     * @return Builder<EventLog>
-     */
-    public function scopeUnsynced(Builder $query): Builder
-    {
-        /** @var Builder<EventLog> */
-        return $query->whereNull('sync_failed_at')->whereNull('synced_at');
-    }
-
-    /**
-     * Payload shape for outbound providers (e.g. Azure Event Hubs).
-     *
-     * @return array<string, mixed>
-     */
-    public function toProviderPayload(): array
-    {
-        return AzureEventHubDTO::fromEventLog($this)->toArray();
-    }
-
-    public function toArray(): array
-    {
-        if (Config::get('laravel-event-logs.legacy_to_array_provider_payload', true)) {
-            return $this->toProviderPayload();
-        }
-
-        return parent::toArray();
-    }
 
     /**
      * Create a new factory instance for the model.

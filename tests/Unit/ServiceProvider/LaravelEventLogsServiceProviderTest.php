@@ -1,10 +1,8 @@
 <?php
 
-use CodebarAg\LaravelEventLogs\Contracts\EventLogTransport;
 use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
 use CodebarAg\LaravelEventLogs\LaravelEventLogsServiceProvider;
 use CodebarAg\LaravelEventLogs\Models\EventLog;
-use CodebarAg\LaravelEventLogs\Transports\AzureEventHubTransport;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Schema;
@@ -15,13 +13,6 @@ test('service provider registers config', function () {
 
     expect(Config::get('laravel-event-logs'))->toBeArray();
     expect(Config::get('laravel-event-logs.enabled'))->not->toBeNull();
-});
-
-test('service provider binds event log transport', function () {
-    $provider = new LaravelEventLogsServiceProvider($this->app);
-    $provider->register();
-
-    expect($this->app->make(EventLogTransport::class))->toBeInstanceOf(AzureEventHubTransport::class);
 });
 
 test('service provider publishes config file', function () {
