@@ -32,7 +32,6 @@ class EventLogFactory extends Factory
             'event' => fake()->randomElement(EventLogEventEnum::cases()),
             'event_data' => ['k' => 'v'],
             'context' => ['k' => 'v'],
-            'synced_at' => null,
         ];
     }
 }

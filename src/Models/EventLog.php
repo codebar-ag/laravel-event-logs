@@ -4,10 +4,8 @@ namespace CodebarAg\LaravelEventLogs\Models;
 
 use Carbon\Carbon;
 use CodebarAg\LaravelEventLogs\Database\Factories\EventLogFactory;
-use CodebarAg\LaravelEventLogs\DTO\AzureEventHubDTO;
 use CodebarAg\LaravelEventLogs\Enums\EventLogEventEnum;
 use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Config;
@@ -17,20 +15,20 @@ use Illuminate\Support\Facades\Config;
  * @property string $uuid
  * @property EventLogTypeEnum|null $type
  * @property string|null $subject_type
- * @property int|null $subject_id
+ * @property string|null $subject_id
  * @property string|null $user_type
  * @property int|null $user_id
  * @property string|null $request_ip
  * @property string|null $request_method
  * @property string|null $request_url
  * @property string|null $request_route
+ * @property int|null $response_status
+ * @property int|null $duration_ms
  * @property array<string, mixed>|null $request_headers
  * @property array<string, mixed>|null $request_data
  * @property EventLogEventEnum|null $event
  * @property array<string, mixed>|null $event_data
  * @property array<string, mixed>|null $context
- * @property Carbon|null $synced_at
- * @property Carbon|null $sync_failed_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  *
@@ -51,6 +49,8 @@ class EventLog extends Model
         'user_type',
         'user_id',
         'request_route',
+        'response_status',
+        'duration_ms',
         'request_method',
         'request_url',
         'request_ip',
@@ -59,8 +59,6 @@ class EventLog extends Model
         'event',
         'event_data',
         'context',
-        'synced_at',
-        'sync_failed_at',
     ];
 
     /**
@@ -103,24 +101,10 @@ class EventLog extends Model
         'event' => EventLogEventEnum::class,
         'event_data' => 'array',
         'context' => 'array',
-        'synced_at' => 'datetime',
-        'sync_failed_at' => 'datetime',
+        'response_status' => 'integer',
+        'duration_ms' => 'integer',
+        'subject_id' => 'string',
     ];
-
-    /**
-     * @param  Builder<EventLog>  $query
-     * @return Builder<EventLog>
-     */
-    public function scopeUnsynced(Builder $query): Builder
-    {
-        /** @var Builder<EventLog> */
-        return $query->whereNull('sync_failed_at')->whereNull('synced_at');
-    }
-
-    public function toArray(): array
-    {
-        return AzureEventHubDTO::fromEventLog($this)->toArray();
-    }
 
     /**
      * Create a new factory instance for the model.
