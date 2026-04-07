@@ -32,12 +32,15 @@ test('middleware logs request when enabled', function () {
     $result = $middleware->handle($request, function ($req) use ($response) {
         return $response;
     });
+    $middleware->terminate($request, $result);
 
     expect($result)->toBe($response);
 
     $eventLog = EventLog::where('request_route', 'api.users.store')->first();
     expect($eventLog)->not->toBeNull();
     expect($eventLog->request_method)->toBe('POST');
+    expect($eventLog->response_status)->toBe(200);
+    expect($eventLog->duration_ms)->toBeGreaterThanOrEqual(0);
     expect($eventLog->request_url)->toBe('https://example.com/api/users');
     expect($eventLog->request_ip)->toBe('127.0.0.1');
 });
@@ -114,6 +117,7 @@ test('middleware handles route without name', function () {
     $result = $middleware->handle($request, function ($req) use ($response) {
         return $response;
     });
+    $middleware->terminate($request, $result);
 
     expect($result)->toBe($response);
 
@@ -142,6 +146,7 @@ test('middleware handles null route', function () {
     $result = $middleware->handle($request, function ($req) use ($response) {
         return $response;
     });
+    $middleware->terminate($request, $result);
 
     expect($result)->toBe($response);
 
@@ -173,9 +178,10 @@ test('middleware sanitizes request headers', function () {
     $middleware = new EventLogMiddleware;
     $response = new Response('OK', 200);
 
-    $middleware->handle($request, function ($req) use ($response) {
+    $result = $middleware->handle($request, function ($req) use ($response) {
         return $response;
     });
+    $middleware->terminate($request, $result);
 
     $eventLog = EventLog::where('request_route', 'api.users.store')->first();
     expect($eventLog)->not->toBeNull();
@@ -211,9 +217,10 @@ test('middleware sanitizes request data', function () {
     $middleware = new EventLogMiddleware;
     $response = new Response('OK', 200);
 
-    $middleware->handle($request, function ($req) use ($response) {
+    $result = $middleware->handle($request, function ($req) use ($response) {
         return $response;
     });
+    $middleware->terminate($request, $result);
 
     $eventLog = EventLog::where('request_route', 'api.users.store')->first();
     expect($eventLog)->not->toBeNull();
@@ -245,10 +252,11 @@ test('middleware handles authenticated user', function () {
         return $user;
     });
 
-    // Configure auth guards so the middleware can iterate through them
+    // Configure auth guards so the middleware resolves the default guard
     config()->set('auth.guards', [
         'web' => ['driver' => 'session', 'provider' => 'users'],
     ]);
+    config()->set('auth.defaults.guard', 'web');
 
     // Mock Auth::guard() to return a guard that has the user for any guard
     $guard = Mockery::mock();
@@ -263,9 +271,10 @@ test('middleware handles authenticated user', function () {
     $middleware = new EventLogMiddleware;
     $response = new Response('OK', 200);
 
-    $middleware->handle($request, function ($req) use ($response) {
+    $result = $middleware->handle($request, function ($req) use ($response) {
         return $response;
     });
+    $middleware->terminate($request, $result);
 
     $eventLog = EventLog::where('request_route', 'api.users.store')->first();
     expect($eventLog)->not->toBeNull();
@@ -297,6 +306,7 @@ test('middleware handles exclude_routes as non-array', function () {
     $result = $middleware->handle($request, function ($req) use ($response) {
         return $response;
     });
+    $middleware->terminate($request, $result);
 
     expect($result)->toBe($response);
     $eventLog = EventLog::where('request_route', 'api.users.store')->first();

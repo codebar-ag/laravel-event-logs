@@ -19,24 +19,14 @@
         </include>
     </source>
 
-    <coverage>
-        <include>
-            <directory suffix=".php">src</directory>
-        </include>
-        <exclude>
-            <directory>tests</directory>
-            <directory>vendor</directory>
-        </exclude>
-    </coverage>
-
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="CACHE_DRIVER" value="array"/>
         <env name="SESSION_DRIVER" value="array"/>
-        <env name="QUEUE_DRIVER" value="sync"/>
-        <env name="MAIL_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="MAIL_MAILER" value="array"/>
         <env name="EVENT_LOGS_ENABLED" value="true"/>
         <env name="AZURE_EVENT_HUB_ENDPOINT" value="https://test-namespace.servicebus.windows.net"/>
         <env name="AZURE_EVENT_HUB_PATH" value="test-event-hub"/>

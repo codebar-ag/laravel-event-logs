@@ -7,7 +7,7 @@ export default defineConfig({
             processes: 4,
         },
         coverage: {
-            enabled: true,
+            enabled: false,
             provider: 'phpunit',
             reports: ['text', 'html'],
             exclude: [
