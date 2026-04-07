@@ -4,11 +4,12 @@
 [![Downloads](https://img.shields.io/packagist/dt/codebar-ag/laravel-event-logs.svg)](https://packagist.org/packages/codebar-ag/laravel-event-logs/stats)
 [![License](https://img.shields.io/packagist/l/codebar-ag/laravel-event-logs.svg)](https://github.com/codebar-ag/laravel-event-logs/blob/main/LICENSE)
 [![PHP Version](https://img.shields.io/packagist/php-v/codebar-ag/laravel-event-logs?logo=php&logoColor=white)](https://packagist.org/packages/codebar-ag/laravel-event-logs)
-[![Laravel Version](https://img.shields.io/badge/Laravel-12.x%2B-FF2D20?logo=laravel&logoColor=white)](https://laravel.com)
-[![PEST](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/pest.yml/badge.svg)](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/pest.yml)
+[![Laravel Version](https://img.shields.io/badge/Laravel-13.x%2B-FF2D20?logo=laravel&logoColor=white)](https://laravel.com)
+[![Tests](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/run-tests.yml/badge.svg)](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/run-tests.yml)
 [![PHPStan](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/phpstan.yml/badge.svg)](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/phpstan.yml)
+[![Coverage](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/pest-coverage.yml/badge.svg)](https://github.com/codebar-ag/laravel-event-logs/actions/workflows/pest-coverage.yml)
 
-This package provides event logging for HTTP requests and model events. It is provider-agnostic and supports pluggable transports. The initial provider implementation ships an Azure Event Hub sender.
+This package records HTTP requests and model lifecycle events as rows in your database. Configure a **dedicated database connection** for the `event_logs` table so logging stays isolated from your primary application data.
 
 ## Table of Contents
 
@@ -17,17 +18,18 @@ This package provides event logging for HTTP requests and model events. It is pr
 - [Configuration](#configuration)
   - [Database Connection](#database-connection)
   - [Schema Management](#schema-management)
+  - [Configuration reference](#configuration-reference)
+- [Upgrading](#upgrading)
 - [Usage](#usage)
   - [Middleware Request Logging](#middleware-request-logging)
   - [Model Event Logging](#model-event-logging)
-  - [Sending Logs to Azure Event Hub](#sending-logs-to-azure-event-hub)
   - [Adding Context](#adding-context)
 
 ## Requirements
 
-- Laravel 12
-- PHP 8.4
-- Azure Event Hub subscription
+- Laravel 13+
+- PHP 8.3+
+- A database connection for event logs (can be your default connection, but a separate connection is recommended)
 
 ## Installation
 
@@ -43,7 +45,7 @@ composer require codebar-ag/laravel-event-logs
 php artisan vendor:publish --provider="CodebarAg\\LaravelEventLogs\\LaravelEventLogsServiceProvider"
 ```
 
-This will publish the configuration file to `config/laravel-event-logs.php` where you can customize the package settings.
+This publishes `config/laravel-event-logs.php` and `config/laravel-event-logs-exclude-routes-defaults.php` (Nova/Livewire route skip list). Override `exclude_routes` in the main config file if you need a custom list; you can delete the defaults file from your app if you inline the array.
 
 ### Publish Migrations (Optional)
 
@@ -78,6 +80,8 @@ EVENT_LOGS_CONNECTION=event_logs_db
 
 This is useful when you want to store event logs in a separate database for better performance or isolation.
 
+When `enabled` is `true`, `EventLog::isEnabled()` also requires `connection` to be a **non-empty** string. Set `EVENT_LOGS_CONNECTION` (or the config value) to your connection name; use your app’s default connection name explicitly if you do not use a dedicated logs connection.
+
 ### Schema Management
 
 The package provides Artisan commands to manage the event logs database schema:
@@ -92,11 +96,29 @@ php artisan event-logs:schema:create
 
 This command will:
 - Check if the event logs connection is configured
-- Verify if the `event_logs` table already exists
-- Run the migration to create the `event_logs` table if it doesn't exist
-- Automatically publish migrations if they haven't been published yet
+- Exit successfully if the `event_logs` table already exists
+- Publish package migrations to `database/migrations/` if needed
+- Run `php artisan migrate` for the single package migration (`2026_04_10_000000_create_event_logs_table.php`), creating the full table (including `response_status`, `duration_ms`, and string `subject_id`) in one step
+- Fail with Artisan output if `migrate` returns a non-zero exit code
 
-**Note**: The command requires the `connection` configuration to be set. If not configured, the command will fail with an error message. If migrations are not published, the command will automatically publish them before running the migration.
+**Note**: The command requires the `connection` configuration to be set. Migrations are published into your app so the path is under the application root (required by Laravel’s migrator).
+
+#### Update Schema
+
+Reconcile the live `event_logs` table with the package definition (columns and indexes in order). Use this when the table already exists but may be missing columns (for example after a partial manual setup or an old install):
+
+```bash
+php artisan event-logs:schema:update
+```
+
+This command will:
+
+- Require the event logs `connection` configuration (same as create/drop)
+- **Create** the full `event_logs` table if it is missing (same layout as the package migration)
+- Otherwise **add** any missing columns, then try to **convert** legacy integer `subject_id` to `string(36)` when detected, then **ensure** indexes (duplicate index errors are ignored)
+- Print what changed, or `Schema is already up to date.` when nothing was needed
+
+Converting `subject_id` on MySQL, PostgreSQL, or SQL Server often needs **`doctrine/dbal`**; the package lists it under `composer suggest`. For apps that only use Laravel’s migration history on a clean database, `php artisan migrate` is usually enough.
 
 #### Drop Schema
 
@@ -119,21 +141,61 @@ This command will:
 
 **Warning**: This will permanently delete all event logs data. Use with caution.
 
+### Configuration reference
+
+Published defaults live in `config/laravel-event-logs.php`. Common keys (see the file for the full list and inline comments):
+
+| Area | Keys / env |
+|------|------------|
+| Feature toggle | `enabled` (`EVENT_LOGS_ENABLED`) |
+| DB connection | `connection` (`EVENT_LOGS_CONNECTION`) — required when enabled |
+| Writes | `persist_mode` (`EVENT_LOGS_PERSIST_MODE`: `sync` or `queued`), `queue.connection`, `queue.queue` |
+| Sanitization | `sanitize.request_headers_exclude`, `sanitize.request_data_exclude` |
+| Context stored on rows | `context.enabled`, `context.allow_keys` (comma-separated env `EVENT_LOGS_CONTEXT_ALLOW_KEYS`), `context.max_keys`, `context.max_json_bytes` |
+| HTTP user lookup | `user_resolution.guards`, `user_resolution.scan_all_guards` |
+| Route skipping | `exclude_routes` (defaults loaded from `config/laravel-event-logs-exclude-routes-defaults.php` in the package), `exclude_routes_match` (`EVENT_LOGS_EXCLUDE_ROUTES_MATCH`: `exact`, `wildcard`, `auto`) |
+
+## Upgrading
+
+The package ships **one** migration: [`database/migrations/2026_04_10_000000_create_event_logs_table.php`](database/migrations/2026_04_10_000000_create_event_logs_table.php). It creates `event_logs` with the full current schema (HTTP metrics columns, string `subject_id`, no Azure-era sync columns). If the table already exists, `up()` does nothing (safe when upgrading).
+
+**If you previously published older package migrations** (`2025_08_09_*`, `2026_04_07_*`, `2026_04_08_*`), remove those files from your app’s `database/migrations` and publish again (or copy the new migration only) so you do not duplicate `create_event_logs` migrations.
+
+**HTTP middleware** must remain a **terminable** middleware in the stack (Laravel invokes `terminate()` automatically when registered via `append` / the HTTP kernel). If you only call `handle()` in custom tests, call `terminate($request, $response)` yourself.
+
+**Breaking changes (recent versions)**
+
+- Azure Event Hubs and `EventLogTransport` were removed; logs are stored only in the database.
+- `EventLog::toProviderPayload()`, `legacy_to_array_provider_payload`, and Azure-shaped `toArray()` are removed; use normal Eloquent `toArray()` / API resources as needed.
+- `exclude_routes_match` defaults to `exact`. Use `auto` or `wildcard` so patterns like `nova.api.` or `livewire.*` work as intended.
+
 ## Usage
 
 ### Middleware Request Logging
 
-The `EventLogMiddleware` automatically logs all HTTP requests. Add it to your Laravel 12 application:
+The `EventLogMiddleware` automatically logs all HTTP requests after the response is available. Add it to your application:
 
 #### Configuration
 
 ```php
-// config/laravel-event-logs.php
+// config/laravel-event-logs.php (illustrative — publish for full defaults)
 return [
     'enabled' => env('EVENT_LOGS_ENABLED', false),
-    'connection' => env('EVENT_LOGS_CONNECTION', null),
+    'connection' => env('EVENT_LOGS_CONNECTION', null), // non-empty when enabled
+    'persist_mode' => env('EVENT_LOGS_PERSIST_MODE', 'sync'),
+    'exclude_routes_match' => env('EVENT_LOGS_EXCLUDE_ROUTES_MATCH', 'exact'),
     'exclude_routes' => [
         'livewire.update',
+    ],
+    'user_resolution' => [
+        'guards' => null, // or e.g. ['web', 'sanctum']
+        'scan_all_guards' => false,
+    ],
+    'context' => [
+        'enabled' => true,
+        'allow_keys' => [], // empty = all keys; or restrict via EVENT_LOGS_CONTEXT_ALLOW_KEYS
+        'max_keys' => null,
+        'max_json_bytes' => null,
     ],
     'sanitize' => [
         'request_headers_exclude' => [
@@ -144,15 +206,8 @@ return [
         'request_data_exclude' => [
             'password',
             'password_confirmation',
+            '_token',
             'token',
-        ],
-    ],
-    'providers' => [
-        'azure_event_hub' => [
-            'endpoint' => env('AZURE_EVENT_HUB_ENDPOINT'),
-            'path' => env('AZURE_EVENT_HUB_PATH'),
-            'policy_name' => env('AZURE_EVENT_HUB_POLICY_NAME', 'RootManageSharedAccessKey'),
-            'primary_key' => env('AZURE_EVENT_HUB_PRIMARY_KEY'),
         ],
     ],
 ];
@@ -162,7 +217,8 @@ return [
 
 ```php
 // bootstrap/app.php
-use CodebarAg\\LaravelEventLogs\\Middleware\\EventLogMiddleware;
+use CodebarAg\LaravelEventLogs\Middleware\EventLogMiddleware;
+use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
@@ -178,22 +234,27 @@ return Application::configure(basePath: dirname(__DIR__))
 The middleware logs these HTTP request details:
 
 - **Request Information**: Method, URL, route name, IP address
-- **Request User**: Authenticated user type and ID
+- **Response**: HTTP status code and duration in milliseconds
+- **Request User**: Authenticated user type and ID (see `user_resolution` in config)
 - **Request Data**: Sanitized headers and payload
-- **Context**: Application context information
+- **Context**: Filtered application context (`context.*` config: allowlist, max keys, max JSON bytes)
+
+Optional: set `persist_mode` to `queued` and configure `queue.connection` / `queue.queue` to write rows via `RecordEventLogJob`.
 
 #### Example Output
 
 ```php
-// Using AzureEventHubDTO::toArray()
+// Illustrative attributes persisted on the event_logs row (see EventLog model / toArray())
 [
     'uuid' => '550e8400-e29b-41d4-a716-446655440000',
-    'type' => 'http_request',
+    'type' => 'http',
     'subject_type' => null,
     'subject_id' => null,
     'user_type' => 'App\Models\User',
     'user_id' => 456,
     'request_route' => 'users.store',
+    'response_status' => 201,
+    'duration_ms' => 42,
     'request_method' => 'POST',
     'request_url' => 'https://example.com/api/users',
     'request_ip' => '192.168.1.100',
@@ -202,109 +263,13 @@ The middleware logs these HTTP request details:
     'event' => null,
     'event_data' => null,
     'context' => ['locale' => 'de_CH', 'environment' => 'production'],
-    'created_at' => '2024-01-15 10:30:00'
+    'created_at' => '2024-01-15T10:30:00+00:00',
 ]
-```
-
-### Sending Logs to Azure Event Hub
-
-The package provides an action to send event logs to Azure Event Hub. You can process events in background jobs for better performance.
-
-#### Configuration
-
-Add your Azure Event Hub credentials to the published config file under `providers.azure_event_hub`:
-
-```php
-// config/laravel-event-logs.php
-return [
-    'enabled' => env('EVENT_LOGS_ENABLED', false),
-    'providers' => [
-        'azure_event_hub' => [
-            'endpoint' => env('AZURE_EVENT_HUB_ENDPOINT'),
-            'path' => env('AZURE_EVENT_HUB_PATH'),
-            'policy_name' => env('AZURE_EVENT_HUB_POLICY_NAME', 'RootManageSharedAccessKey'),
-            'primary_key' => env('AZURE_EVENT_HUB_PRIMARY_KEY'),
-        ],
-    ],
-];
-```
-
-#### Environment Variables
-
-```bash
-AZURE_EVENT_HUB_ENDPOINT=https://your-namespace.servicebus.windows.net
-AZURE_EVENT_HUB_PATH=your-event-hub-name
-AZURE_EVENT_HUB_POLICY_NAME=RootManageSharedAccessKey
-AZURE_EVENT_HUB_PRIMARY_KEY=your-primary-key
-```
-
-#### Available Methods
-
-- **`(new AzureEventHubAction())->send(EventLog $eventLog): void`**: Sends a single `CodebarAg\LaravelEventLogs\Models\EventLog` to Azure Event Hub using the REST API. The payload is the model's `toArray()` encoded as JSON and sent to `.../messages?api-version=2014-01` with a SAS token in the `Authorization` header`. Guard calls with `config('laravel-event-logs.enabled')` and handle idempotency (e.g., `synced_at`) in your job.
-
-Minimal usage example:
-
-```php
-use CodebarAg\LaravelEventLogs\Actions\AzureEventHubAction;
-use CodebarAg\LaravelEventLogs\Models\EventLog;
-
-// Send one event (instance API)
-(new AzureEventHubAction())->send($eventLog); // $eventLog is an instance of EventLog
-```
-
-#### Example Implementation
-
-Create a job to process and send event logs to Azure Event Hub:
-
-```php
-<?php
-
-namespace App\Jobs;
-
-use CodebarAg\LaravelEventLogs\Actions\AzureEventHubAction;
-use CodebarAg\LaravelEventLogs\Models\EventLog;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-
-class ProcessAzureEventJob implements ShouldQueue
-{
-    use Queueable;
-
-    public function __construct(
-        private EventLog $eventLog
-    ) {}
-
-    public function handle(): void
-    {
-        $enabled = config('laravel-event-logs.enabled');
-
-        if (! $enabled) {
-            return;
-        }
-
-        if ($this->eventLog->synced_at) {
-            return;
-        }
-
-        (new AzureEventHubAction())->send($this->eventLog);
-
-        $this->eventLog->update([
-            'synced_at' => now(),
-        ]);
-    }
-
-    public function failed(\Throwable $exception): void
-    {
-        $this->eventLog->update([
-            'synced_at' => null,
-        ]);
-    }
-}
 ```
 
 ### Model Event Logging
 
-Use the `HasEventLogTrait` to automatically log model events (created, updated, deleted, restored).
+Use the `HasEventLogTrait` to automatically log model events (created, updated, deleted, restored). Rows are written through the same `EventLogRecorder` as HTTP logs, so `persist_mode` (`sync` or `queued`) applies here too.
 
 #### Implementation
 
@@ -346,7 +311,7 @@ Each model event logs:
 #### Example Output
 
 ```php
-// Using AzureEventHubDTO::toArray() when a User model is created:
+// Illustrative attributes when a User model is created:
 [
     'uuid' => '550e8400-e29b-41d4-a716-446655440000',
     'type' => 'model',
@@ -355,6 +320,8 @@ Each model event logs:
     'user_type' => 'App\Models\User',
     'user_id' => 456,
     'request_route' => null,
+    'response_status' => null,
+    'duration_ms' => null,
     'request_method' => null,
     'request_url' => null,
     'request_ip' => null,
@@ -371,13 +338,15 @@ Each model event logs:
         'dirty_keys' => [],
     ],
     'context' => ['tenant_id' => 1],
-    'created_at' => '2024-01-15 10:30:00'
+    'created_at' => '2024-01-15T10:30:00+00:00',
 ]
 ```
 
 ### Adding Context
 
-Use Laravel's Context facade to add custom context that will be included in all event logs. For example: create a middleware to set context before the EventLogMiddleware runs:
+Use Laravel’s `Context` facade to add data that can be persisted on `event_logs` rows. What actually gets stored is filtered by the `context` config (`enabled`, optional `allow_keys`, `max_keys`, `max_json_bytes`) — see [Configuration reference](#configuration-reference).
+
+For example, set context in middleware that runs **before** `EventLogMiddleware`:
 
 ```php
 <?php
@@ -405,6 +374,7 @@ Register the context middleware before EventLogMiddleware:
 // bootstrap/app.php
 use App\Http\Middleware\SetRequestContext;
 use CodebarAg\LaravelEventLogs\Middleware\EventLogMiddleware;
+use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
