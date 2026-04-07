@@ -28,9 +28,5 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="EVENT_LOGS_ENABLED" value="true"/>
-        <env name="AZURE_EVENT_HUB_ENDPOINT" value="https://test-namespace.servicebus.windows.net"/>
-        <env name="AZURE_EVENT_HUB_PATH" value="test-event-hub"/>
-        <env name="AZURE_EVENT_HUB_POLICY_NAME" value="RootManageSharedAccessKey"/>
-        <env name="AZURE_EVENT_HUB_PRIMARY_KEY" value="test-primary-key-for-testing-only"/>
     </php>
 </phpunit>

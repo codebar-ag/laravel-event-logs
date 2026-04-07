@@ -45,7 +45,7 @@ composer require codebar-ag/laravel-event-logs
 php artisan vendor:publish --provider="CodebarAg\\LaravelEventLogs\\LaravelEventLogsServiceProvider"
 ```
 
-This will publish the configuration file to `config/laravel-event-logs.php` where you can customize the package settings.
+This publishes `config/laravel-event-logs.php` and `config/laravel-event-logs-exclude-routes-defaults.php` (Nova/Livewire route skip list). Override `exclude_routes` in the main config file if you need a custom list; you can delete the defaults file from your app if you inline the array.
 
 ### Publish Migrations (Optional)
 
@@ -96,11 +96,29 @@ php artisan event-logs:schema:create
 
 This command will:
 - Check if the event logs connection is configured
-- Verify if the `event_logs` table already exists
-- Run the migration to create the `event_logs` table if it doesn't exist
-- Automatically publish migrations if they haven't been published yet
+- Exit successfully if the `event_logs` table already exists
+- Publish package migrations to `database/migrations/` if needed
+- Run `php artisan migrate` for the single package migration (`2026_04_10_000000_create_event_logs_table.php`), creating the full table (including `response_status`, `duration_ms`, and string `subject_id`) in one step
+- Fail with Artisan output if `migrate` returns a non-zero exit code
 
-**Note**: The command requires the `connection` configuration to be set. If not configured, the command will fail with an error message. If migrations are not published, the command will automatically publish them before running the migration.
+**Note**: The command requires the `connection` configuration to be set. Migrations are published into your app so the path is under the application root (required by Laravel’s migrator).
+
+#### Update Schema
+
+Reconcile the live `event_logs` table with the package definition (columns and indexes in order). Use this when the table already exists but may be missing columns (for example after a partial manual setup or an old install):
+
+```bash
+php artisan event-logs:schema:update
+```
+
+This command will:
+
+- Require the event logs `connection` configuration (same as create/drop)
+- **Create** the full `event_logs` table if it is missing (same layout as the package migration)
+- Otherwise **add** any missing columns, then try to **convert** legacy integer `subject_id` to `string(36)` when detected, then **ensure** indexes (duplicate index errors are ignored)
+- Print what changed, or `Schema is already up to date.` when nothing was needed
+
+Converting `subject_id` on MySQL, PostgreSQL, or SQL Server often needs **`doctrine/dbal`**; the package lists it under `composer suggest`. For apps that only use Laravel’s migration history on a clean database, `php artisan migrate` is usually enough.
 
 #### Drop Schema
 
@@ -135,23 +153,13 @@ Published defaults live in `config/laravel-event-logs.php`. Common keys (see the
 | Sanitization | `sanitize.request_headers_exclude`, `sanitize.request_data_exclude` |
 | Context stored on rows | `context.enabled`, `context.allow_keys` (comma-separated env `EVENT_LOGS_CONTEXT_ALLOW_KEYS`), `context.max_keys`, `context.max_json_bytes` |
 | HTTP user lookup | `user_resolution.guards`, `user_resolution.scan_all_guards` |
-| Route skipping | `exclude_routes`, `exclude_routes_match` (`EVENT_LOGS_EXCLUDE_ROUTES_MATCH`: `exact`, `wildcard`, `auto`) |
+| Route skipping | `exclude_routes` (defaults loaded from `config/laravel-event-logs-exclude-routes-defaults.php` in the package), `exclude_routes_match` (`EVENT_LOGS_EXCLUDE_ROUTES_MATCH`: `exact`, `wildcard`, `auto`) |
 
 ## Upgrading
 
-The migration that changes `subject_id` from integer to string ([`2026_04_07_120001_alter_event_logs_subject_id_and_sync_index.php`](database/migrations/2026_04_07_120001_alter_event_logs_subject_id_and_sync_index.php)) uses `->change()`. On **MySQL, PostgreSQL, and SQL Server**, Laravel needs the Doctrine DBAL package for that operation. Install it in your application before migrating:
+The package ships **one** migration: [`database/migrations/2026_04_10_000000_create_event_logs_table.php`](database/migrations/2026_04_10_000000_create_event_logs_table.php). It creates `event_logs` with the full current schema (HTTP metrics columns, string `subject_id`, no Azure-era sync columns). If the table already exists, `up()` does nothing (safe when upgrading).
 
-```bash
-composer require doctrine/dbal
-```
-
-SQLite (including typical local tests) usually does not require DBAL for this change.
-
-Run new package migrations (or republish and migrate) so your `event_logs` table gains:
-
-- `response_status` and `duration_ms` (HTTP rows are written in `terminate()` so status and timing are available)
-- `subject_id` as a string (UUID-friendly)
-- Removal of `synced_at`, `sync_failed_at`, and the `event_logs_sync_pending_index` index (database-only package; migration `2026_04_08_120000_remove_event_logs_outbound_sync_columns.php`)
+**If you previously published older package migrations** (`2025_08_09_*`, `2026_04_07_*`, `2026_04_08_*`), remove those files from your app’s `database/migrations` and publish again (or copy the new migration only) so you do not duplicate `create_event_logs` migrations.
 
 **HTTP middleware** must remain a **terminable** middleware in the stack (Laravel invokes `terminate()` automatically when registered via `append` / the HTTP kernel). If you only call `handle()` in custom tests, call `terminate($request, $response)` yourself.
 

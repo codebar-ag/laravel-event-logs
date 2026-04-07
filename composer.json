@@ -11,6 +11,9 @@
             "role": "Software-Engineer"
         }
     ],
+  "suggest": {
+    "doctrine/dbal": "May be required for event-logs:schema:update when altering subject_id from integer to string on MySQL, PostgreSQL, or SQL Server."
+  },
   "require": {
     "php": "^8.3",
     "illuminate/support": "^13.0",
@@ -19,9 +22,6 @@
     "illuminate/database": "^13.0",
     "illuminate/http": "^13.0",
     "illuminate/pipeline": "^13.0"
-  },
-  "suggest": {
-    "doctrine/dbal": "Install when running migrations that alter existing columns with ->change() (e.g. widening subject_id to string) on MySQL, PostgreSQL, or SQL Server."
   },
   "require-dev": {
     "larastan/larastan": "^3.9.3",

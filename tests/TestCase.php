@@ -59,16 +59,7 @@ abstract class TestCase extends Orchestra
             $table->timestamps();
         });
 
-        $migration = include __DIR__.'/../database/migrations/2025_08_09_115521_create_event_logs_table.php';
+        $migration = include LaravelEventLogsServiceProvider::createEventLogsMigrationPath();
         $migration->up();
-
-        $responseMetricsMigration = include __DIR__.'/../database/migrations/2026_04_07_120000_add_response_metrics_to_event_logs_table.php';
-        $responseMetricsMigration->up();
-
-        $subjectMigration = include __DIR__.'/../database/migrations/2026_04_07_120001_alter_event_logs_subject_id_and_sync_index.php';
-        $subjectMigration->up();
-
-        $removeSyncMigration = include __DIR__.'/../database/migrations/2026_04_08_120000_remove_event_logs_outbound_sync_columns.php';
-        $removeSyncMigration->up();
     }
 }

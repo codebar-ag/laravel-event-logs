@@ -31,6 +31,7 @@ test('service provider registers commands when running in console', function () 
 
     expect(Artisan::all())->toHaveKey('event-logs:schema:create');
     expect(Artisan::all())->toHaveKey('event-logs:schema:drop');
+    expect(Artisan::all())->toHaveKey('event-logs:schema:update');
 });
 
 test('service provider registers observer for EventLog model', function () {

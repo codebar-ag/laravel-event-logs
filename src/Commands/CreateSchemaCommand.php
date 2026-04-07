@@ -2,6 +2,7 @@
 
 namespace CodebarAg\LaravelEventLogs\Commands;
 
+use CodebarAg\LaravelEventLogs\LaravelEventLogsServiceProvider;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
@@ -24,26 +25,24 @@ class CreateSchemaCommand extends Command
             return self::FAILURE;
         }
 
-        $tableExists = Schema::connection($connection)->hasTable('event_logs');
-        if ($tableExists) {
+        if (Schema::connection($connection)->hasTable('event_logs')) {
             $this->info('Event logs table already exists');
 
             return self::SUCCESS;
         }
 
-        $publishedMigrationPath = database_path('migrations/2025_08_09_115521_create_event_logs_table.php');
-        $migrationFile = __DIR__.'/../../database/migrations/2025_08_09_115521_create_event_logs_table.php';
+        $migrationFile = LaravelEventLogsServiceProvider::createEventLogsMigrationPath();
+        $migrationBasename = LaravelEventLogsServiceProvider::CREATE_EVENT_LOGS_MIGRATION;
+        $publishedMigrationPath = database_path('migrations/'.$migrationBasename);
 
-        $migrationExists = File::exists($migrationFile);
-        if (! $migrationExists) {
+        if (! File::exists($migrationFile)) {
             $this->error('Migration file not found. Please publish migrations first:');
             $this->line('php artisan vendor:publish --tag=laravel-event-logs-migrations');
 
             return self::FAILURE;
         }
 
-        $migrationsPublished = File::exists($publishedMigrationPath);
-        if (! $migrationsPublished) {
+        if (! File::exists($publishedMigrationPath)) {
             $this->warn('Migrations are not published. Publishing them now...');
 
             Artisan::call('vendor:publish', [
@@ -54,12 +53,26 @@ class CreateSchemaCommand extends Command
             $this->info('Migrations published.');
         }
 
+        if (! File::exists($publishedMigrationPath)) {
+            $this->error('Could not publish migrations to database/migrations.');
+
+            return self::FAILURE;
+        }
+
         $this->info('Running migration...');
 
-        Artisan::call('migrate', [
+        $relativePath = 'database/migrations/'.$migrationBasename;
+
+        $exitCode = Artisan::call('migrate', [
             '--database' => $connection,
-            '--path' => 'database/migrations/2025_08_09_115521_create_event_logs_table.php',
+            '--path' => $relativePath,
         ]);
+
+        if ($exitCode !== 0) {
+            $this->error(trim(Artisan::output()));
+
+            return self::FAILURE;
+        }
 
         $this->info('Event logs table created successfully');
 
