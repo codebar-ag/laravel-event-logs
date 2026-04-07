@@ -64,7 +64,7 @@ class EventLogMiddleware
                 'request_url' => $request->fullUrl(),
                 'request_route' => $currentRouteName,
                 'request_headers' => SanitizeHelper::removeKeys($request->headers->all(), $requestHeadersToRemove),
-                'request_data' => SanitizeHelper::removeKeys($request->all(), $requestDataToRemove),
+                'request_data' => SanitizeHelper::removeKeys($request->input(), $requestDataToRemove),
                 'context' => ContextExporter::forPersistence(),
             ],
         ]);

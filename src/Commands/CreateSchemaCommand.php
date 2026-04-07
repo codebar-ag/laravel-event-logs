@@ -66,6 +66,7 @@ class CreateSchemaCommand extends Command
         $exitCode = Artisan::call('migrate', [
             '--database' => $connection,
             '--path' => $relativePath,
+            '--force' => true,
         ]);
 
         if ($exitCode !== 0) {
