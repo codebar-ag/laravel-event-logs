@@ -5,10 +5,11 @@ namespace CodebarAg\LaravelEventLogs\Traits;
 use CodebarAg\LaravelEventLogs\Enums\EventLogEventEnum;
 use CodebarAg\LaravelEventLogs\Enums\EventLogTypeEnum;
 use CodebarAg\LaravelEventLogs\Models\EventLog;
+use CodebarAg\LaravelEventLogs\Support\ContextExporter;
+use CodebarAg\LaravelEventLogs\Support\EventLogRecorder;
 use CodebarAg\LaravelEventLogs\Support\SanitizeHelper;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Context;
 
 trait HasEventLogTrait
 {
@@ -55,7 +56,7 @@ trait HasEventLogTrait
             'dirty_keys' => array_keys($changes),
         ];
 
-        EventLog::create([
+        EventLogRecorder::record([
             'type' => EventLogTypeEnum::MODEL->value,
             'subject_type' => static::class,
             'subject_id' => (string) $this->getKey(),
@@ -63,7 +64,7 @@ trait HasEventLogTrait
             'user_id' => $user?->id,
             'event' => $event->value,
             'event_data' => $payload,
-            'context' => Context::all(),
+            'context' => ContextExporter::forPersistence(),
         ]);
     }
 }

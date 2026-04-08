@@ -31,7 +31,7 @@ test('trait can log created event', function () {
     expect($eventLog)->not->toBeNull();
     expect($eventLog->type)->toBe(EventLogTypeEnum::MODEL);
     expect($eventLog->event)->toBe(EventLogEventEnum::CREATED);
-    expect($eventLog->subject_id)->toBe($model->id);
+    expect($eventLog->subject_id)->toBe((string) $model->id);
 });
 
 test('trait can log updated event', function () {
@@ -52,7 +52,7 @@ test('trait can log updated event', function () {
         ->first();
     expect($eventLog)->not->toBeNull();
     expect($eventLog->event)->toBe(EventLogEventEnum::UPDATED);
-    expect($eventLog->subject_id)->toBe($model->id);
+    expect($eventLog->subject_id)->toBe((string) $model->id);
 });
 
 test('trait can log deleted event', function () {
@@ -72,7 +72,7 @@ test('trait can log deleted event', function () {
         ->first();
     expect($eventLog)->not->toBeNull();
     expect($eventLog->event)->toBe(EventLogEventEnum::DELETED);
-    expect($eventLog->subject_id)->toBe($model->id);
+    expect($eventLog->subject_id)->toBe((string) $model->id);
 });
 
 test('trait can log restored event', function () {
@@ -96,7 +96,7 @@ test('trait can log restored event', function () {
         ->first();
     expect($eventLog)->not->toBeNull();
     expect($eventLog->event)->toBe(EventLogEventEnum::RESTORED);
-    expect($eventLog->subject_id)->toBe($model->id);
+    expect($eventLog->subject_id)->toBe((string) $model->id);
 });
 
 test('trait logs user information when authenticated', function () {
@@ -137,7 +137,7 @@ test('trait handles model without id', function () {
         ->where('event', EventLogEventEnum::CREATED)
         ->first();
     expect($eventLog)->not->toBeNull();
-    expect($eventLog->subject_id)->toBe($model->id);
+    expect($eventLog->subject_id)->toBe((string) $model->id);
     expect($eventLog->user_type)->toBeNull();
     expect($eventLog->user_id)->toBeNull();
 });

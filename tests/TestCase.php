@@ -31,14 +31,6 @@ abstract class TestCase extends Orchestra
         $app['config']->set('laravel-event-logs', [
             'enabled' => true,
             'connection' => 'testing',
-            'providers' => [
-                'azure_event_hub' => [
-                    'endpoint' => env('AZURE_EVENT_HUB_ENDPOINT', 'https://test-namespace.servicebus.windows.net'),
-                    'path' => env('AZURE_EVENT_HUB_PATH', 'test-event-hub'),
-                    'policy_name' => env('AZURE_EVENT_HUB_POLICY_NAME', 'RootManageSharedAccessKey'),
-                    'primary_key' => env('AZURE_EVENT_HUB_PRIMARY_KEY', 'test-primary-key-for-testing-only'),
-                ],
-            ],
             'exclude_routes' => env('EVENT_LOGS_EXCLUDE_ROUTES', []),
             'sanitize' => [
                 'request_headers_exclude' => [
@@ -67,7 +59,7 @@ abstract class TestCase extends Orchestra
             $table->timestamps();
         });
 
-        $migration = include __DIR__.'/../database/migrations/2025_08_09_115521_create_event_logs_table.php';
+        $migration = include LaravelEventLogsServiceProvider::createEventLogsMigrationPath();
         $migration->up();
     }
 }

@@ -1,6 +1,6 @@
 {
   "name": "codebar-ag/laravel-event-logs",
-  "description": "Event logging for HTTP requests and model events with pluggable providers.",
+  "description": "Event logging for HTTP requests and model events to a dedicated database connection.",
   "type": "library",
   "license": "MIT",
   "authors": [
@@ -12,20 +12,21 @@
         }
     ],
   "require": {
-    "php": "^8.4",
-    "illuminate/support": "^12.0",
-    "illuminate/queue": "^12.0",
-    "illuminate/console": "^12.0",
-    "illuminate/database": "^12.0",
-    "illuminate/http": "^12.0",
-    "illuminate/pipeline": "^12.0"
+    "php": "^8.3",
+    "illuminate/support": "^13.0",
+    "illuminate/queue": "^13.0",
+    "illuminate/console": "^13.0",
+    "illuminate/database": "^13.0",
+    "illuminate/http": "^13.0",
+    "illuminate/pipeline": "^13.0"
   },
   "require-dev": {
-    "larastan/larastan": "^3.0",
-    "laravel/pint": "^1.0",
-    "nunomaduro/collision": "^8.6.1",
-    "orchestra/testbench": "^10.1.0",
-    "pestphp/pest": "^3.7.4",
+    "larastan/larastan": "^3.9.3",
+    "laravel/pint": "^1.21.1",
+    "nunomaduro/collision": "^8.8.3",
+    "orchestra/testbench": "^11.0",
+    "pestphp/pest": "^4.0",
+    "pestphp/pest-plugin-laravel": "^4.0",
     "phpstan/extension-installer": "^1.4.3",
     "phpstan/phpstan-deprecation-rules": "^2.0.1",
     "phpstan/phpstan-phpunit": "^2.0.4"
