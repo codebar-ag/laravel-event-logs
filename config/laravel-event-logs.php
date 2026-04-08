@@ -102,12 +102,13 @@ return [
     | Route Exclusion
     |--------------------------------------------------------------------------
     |
-    | exclude_routes_match: exact (default, backward compatible), wildcard (Str::is per pattern),
-    | auto (* glob or trailing . prefix), e.g. nova.api. matches nova.api.foo.
+    | exclude_routes_match: auto (default) uses * globs (Str::is) and trailing . as route-name prefix
+    | (e.g. nova. matches nova.pages.home). Use exact for full-name matches only, or wildcard to apply
+    | Str::is to every pattern.
     |
     */
 
-    'exclude_routes_match' => env('EVENT_LOGS_EXCLUDE_ROUTES_MATCH', 'exact'),
+    'exclude_routes_match' => env('EVENT_LOGS_EXCLUDE_ROUTES_MATCH', 'auto'),
 
     'exclude_routes' => require __DIR__.'/laravel-event-logs-exclude-routes-defaults.php',
 ];

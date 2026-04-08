@@ -36,7 +36,6 @@ final class EventLogsSchema
 
         $table->timestamps();
 
-        $table->index(['uuid']);
         $table->index(['type']);
         $table->index(['subject_type', 'subject_id']);
         $table->index(['user_id', 'user_type']);

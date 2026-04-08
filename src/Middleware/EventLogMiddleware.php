@@ -64,7 +64,7 @@ class EventLogMiddleware
                 'request_url' => $request->fullUrl(),
                 'request_route' => $currentRouteName,
                 'request_headers' => SanitizeHelper::removeKeys($request->headers->all(), $requestHeadersToRemove),
-                'request_data' => SanitizeHelper::removeKeys($request->input(), $requestDataToRemove),
+                'request_data' => SanitizeHelper::removeKeys($this->inputWithoutFiles($request), $requestDataToRemove),
                 'context' => ContextExporter::forPersistence(),
             ],
         ]);
@@ -100,6 +100,24 @@ class EventLogMiddleware
         $payload['duration_ms'] = (int) round((microtime(true) - (float) $startedAt) * 1000);
 
         EventLogRecorder::record($payload);
+    }
+
+    /**
+     * Same input merge as {@see Request::input()} with no key, without merging uploaded files (unlike {@see Request::all()}).
+     *
+     * @return array<string, mixed>
+     */
+    private function inputWithoutFiles(Request $request): array
+    {
+        if ($request->isJson()) {
+            return $request->json()->all() + $request->query->all();
+        }
+
+        if (in_array($request->getRealMethod(), ['GET', 'HEAD'], true)) {
+            return $request->query->all();
+        }
+
+        return $request->request->all() + $request->query->all();
     }
 
     /**

@@ -153,7 +153,7 @@ Published defaults live in `config/laravel-event-logs.php`. Common keys (see the
 | Sanitization | `sanitize.request_headers_exclude`, `sanitize.request_data_exclude` |
 | Context stored on rows | `context.enabled`, `context.allow_keys` (comma-separated env `EVENT_LOGS_CONTEXT_ALLOW_KEYS`), `context.max_keys`, `context.max_json_bytes` |
 | HTTP user lookup | `user_resolution.guards`, `user_resolution.scan_all_guards` |
-| Route skipping | `exclude_routes` (defaults loaded from `config/laravel-event-logs-exclude-routes-defaults.php` in the package), `exclude_routes_match` (`EVENT_LOGS_EXCLUDE_ROUTES_MATCH`: `exact`, `wildcard`, `auto`) |
+| Route skipping | `exclude_routes` (defaults loaded from `config/laravel-event-logs-exclude-routes-defaults.php` in the package), `exclude_routes_match` (`EVENT_LOGS_EXCLUDE_ROUTES_MATCH`: `auto` default, or `exact`, `wildcard`) |
 
 ## Upgrading
 
@@ -167,7 +167,7 @@ The package ships **one** migration: [`database/migrations/2026_04_10_000000_cre
 
 - Azure Event Hubs and `EventLogTransport` were removed; logs are stored only in the database.
 - `EventLog::toProviderPayload()`, `legacy_to_array_provider_payload`, and Azure-shaped `toArray()` are removed; use normal Eloquent `toArray()` / API resources as needed.
-- `exclude_routes_match` defaults to `exact`. Use `auto` or `wildcard` so patterns like `nova.api.` or `livewire.*` work as intended.
+- `exclude_routes_match` defaults to `auto` so shipped `exclude_routes` prefix entries (e.g. `nova.`) work. Set `EVENT_LOGS_EXCLUDE_ROUTES_MATCH=exact` if you only list full route names.
 
 ## Usage
 
@@ -183,9 +183,10 @@ return [
     'enabled' => env('EVENT_LOGS_ENABLED', false),
     'connection' => env('EVENT_LOGS_CONNECTION', null), // non-empty when enabled
     'persist_mode' => env('EVENT_LOGS_PERSIST_MODE', 'sync'),
-    'exclude_routes_match' => env('EVENT_LOGS_EXCLUDE_ROUTES_MATCH', 'exact'),
+    'exclude_routes_match' => env('EVENT_LOGS_EXCLUDE_ROUTES_MATCH', 'auto'),
     'exclude_routes' => [
-        'livewire.update',
+        'livewire.',
+        'nova.',
     ],
     'user_resolution' => [
         'guards' => null, // or e.g. ['web', 'sanctum']

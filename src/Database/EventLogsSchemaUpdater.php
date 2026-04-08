@@ -119,7 +119,7 @@ final class EventLogsSchemaUpdater
      */
     private function ensureIndexes(array &$changes): void
     {
-        $this->tryAddIndex(fn (Blueprint $table) => $table->index(['uuid']), $changes, 'uuid');
+        $this->tryAddUnique(fn (Blueprint $table) => $table->unique(['uuid']), $changes, 'uuid');
         $this->tryAddIndex(fn (Blueprint $table) => $table->index(['type']), $changes, 'type');
         $this->tryAddIndex(fn (Blueprint $table) => $table->index(['subject_type', 'subject_id']), $changes, 'subject_type, subject_id');
         $this->tryAddIndex(fn (Blueprint $table) => $table->index(['user_id', 'user_type']), $changes, 'user_id, user_type');
@@ -134,6 +134,22 @@ final class EventLogsSchemaUpdater
         try {
             Schema::connection($this->connection)->table(self::TABLE, $callback);
             $changes[] = 'Added index: '.$label;
+        } catch (QueryException $e) {
+            if ($this->isDuplicateIndexException($e)) {
+                return;
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * @param  list<string>  $changes
+     */
+    private function tryAddUnique(Closure $callback, array &$changes, string $label): void
+    {
+        try {
+            Schema::connection($this->connection)->table(self::TABLE, $callback);
+            $changes[] = 'Added unique index: '.$label;
         } catch (QueryException $e) {
             if ($this->isDuplicateIndexException($e)) {
                 return;
