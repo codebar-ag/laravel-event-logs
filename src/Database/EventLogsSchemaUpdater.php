@@ -110,7 +110,9 @@ final class EventLogsSchemaUpdater
             });
             $changes[] = 'Altered column subject_id to string(36) for UUID compatibility';
         } catch (Throwable $e) {
-            $changes[] = 'Skipped subject_id conversion (install doctrine/dbal on MySQL/PostgreSQL/SQL Server if needed): '.$e->getMessage();
+            $driver = $schema->getConnection()->getDriverName();
+            $driverLabel = $driver !== '' ? $driver : 'current';
+            $changes[] = 'Skipped subject_id conversion on '.$driverLabel.' connection (column modification failed or is not supported for this database): '.$e->getMessage();
         }
     }
 

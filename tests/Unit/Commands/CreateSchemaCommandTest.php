@@ -50,8 +50,9 @@ test('command runs migration when event logs table is missing', function () {
 
     Schema::connection('testing')->dropIfExists('event_logs');
     if (Schema::connection('testing')->hasTable('migrations')) {
+        $migrationName = pathinfo(LaravelEventLogsServiceProvider::CREATE_EVENT_LOGS_MIGRATION, PATHINFO_FILENAME);
         DB::connection('testing')->table('migrations')
-            ->where('migration', '2026_04_10_000000_create_event_logs_table')
+            ->where('migration', $migrationName)
             ->delete();
     }
     expect(Schema::connection('testing')->hasTable('event_logs'))->toBeFalse();

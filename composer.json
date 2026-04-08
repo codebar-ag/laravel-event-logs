@@ -11,9 +11,6 @@
             "role": "Software-Engineer"
         }
     ],
-  "suggest": {
-    "doctrine/dbal": "May be required for event-logs:schema:update when altering subject_id from integer to string on MySQL, PostgreSQL, or SQL Server."
-  },
   "require": {
     "php": "^8.3",
     "illuminate/support": "^13.0",
