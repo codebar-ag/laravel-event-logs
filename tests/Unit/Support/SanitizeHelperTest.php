@@ -134,3 +134,44 @@ test('removeKeys handles mixed data types', function () {
         ->not->toHaveKey('boolean')
         ->not->toHaveKey('null');
 });
+
+test('removeKeysRecursive removes matching keys at every depth', function () {
+    $data = [
+        'name' => 'John Doe',
+        'Password' => 'secret',
+        'user' => [
+            'email' => 'john@example.com',
+            'password' => 'secret123',
+            'profile' => [
+                'age' => 30,
+                'TOKEN' => 'abc123',
+            ],
+        ],
+        'items' => [
+            ['id' => 1, 'token' => 'x'],
+            ['id' => 2],
+        ],
+    ];
+
+    $result = SanitizeHelper::removeKeysRecursive($data, ['password', 'token']);
+
+    expect($result)->toBe([
+        'name' => 'John Doe',
+        'user' => [
+            'email' => 'john@example.com',
+            'profile' => [
+                'age' => 30,
+            ],
+        ],
+        'items' => [
+            ['id' => 1],
+            ['id' => 2],
+        ],
+    ]);
+});
+
+test('removeKeysRecursive returns data unchanged without keys to remove', function () {
+    $data = ['user' => ['password' => 'secret'], 'list' => [1, 2, 3]];
+
+    expect(SanitizeHelper::removeKeysRecursive($data, []))->toBe($data);
+});
