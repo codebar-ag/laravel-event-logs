@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
+All notable changes to `laravel-event-logs` will be documented in this file.
 
 ## Unreleased
 

@@ -312,3 +312,42 @@ test('middleware handles exclude_routes as non-array', function () {
     $eventLog = EventLog::where('request_route', 'api.users.store')->first();
     expect($eventLog)->not->toBeNull();
 });
+
+test('middleware sanitizes excluded keys in nested request data', function () {
+    $route = Mockery::mock(Route::class);
+    $route->shouldReceive('getName')->andReturn('api.users.nested');
+
+    $request = Request::create('https://example.com/api/users', 'POST', [
+        'user' => [
+            'name' => 'John Doe',
+            'password' => 'secret123',
+            'credentials' => ['token' => 'abc123'],
+        ],
+    ]);
+    $request->setRouteResolver(function () use ($route) {
+        return $route;
+    });
+
+    Auth::shouldReceive('user')->andReturn(null);
+    Auth::shouldReceive('id')->andReturn(null);
+
+    config()->set('laravel-event-logs.enabled', true);
+    config()->set('laravel-event-logs.exclude_routes', []);
+    config()->set('laravel-event-logs.sanitize.request_headers_exclude', []);
+    config()->set('laravel-event-logs.sanitize.request_data_exclude', ['password', 'token']);
+
+    $middleware = new EventLogMiddleware;
+    $response = new Response('OK', 200);
+
+    $result = $middleware->handle($request, fn ($req) => $response);
+    $middleware->terminate($request, $result);
+
+    $eventLog = EventLog::where('request_route', 'api.users.nested')->first();
+    expect($eventLog)->not->toBeNull();
+    expect($eventLog->request_data)->toBe([
+        'user' => [
+            'name' => 'John Doe',
+            'credentials' => [],
+        ],
+    ]);
+});
